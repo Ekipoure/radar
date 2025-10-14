@@ -1,0 +1,249 @@
+'use client';
+
+import { useState } from 'react';
+import { ServerWithStatus } from '@/lib/types';
+import EditServerModal from './EditServerModal';
+
+interface ServerTableProps {
+  servers: ServerWithStatus[];
+  onServerUpdated: () => void;
+  onServerDeleted: () => void;
+}
+
+export default function ServerTable({ servers, onServerUpdated, onServerDeleted }: ServerTableProps) {
+  const [editingServer, setEditingServer] = useState<ServerWithStatus | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'up':
+        return <span className="status-badge status-up">Online</span>;
+      case 'down':
+        return <span className="status-badge status-down">Offline</span>;
+      case 'timeout':
+        return <span className="status-badge status-timeout">Timeout</span>;
+      case 'error':
+        return <span className="status-badge status-error">Error</span>;
+      default:
+        return <span className="status-badge status-unknown">Unknown</span>;
+    }
+  };
+
+  const getRequestTypeIcon = (type: string) => {
+    switch (type) {
+      case 'ping':
+        return (
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        );
+      case 'http':
+        return (
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
+          </svg>
+        );
+      case 'https':
+        return (
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        );
+      case 'tcp':
+        return (
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const handleEdit = (server: ServerWithStatus) => {
+    setEditingServer(server);
+    setShowEditModal(true);
+  };
+
+  const handleToggleStatus = async (server: ServerWithStatus) => {
+    try {
+      const response = await fetch(`/api/servers/${server.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_active: !server.is_active }),
+      });
+
+      if (response.ok) {
+        onServerUpdated();
+      }
+    } catch (error) {
+      console.error('Error toggling server status:', error);
+    }
+  };
+
+  const handleDelete = async (server: ServerWithStatus) => {
+    if (!confirm(`Are you sure you want to delete server "${server.name}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/servers/${server.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        onServerDeleted();
+      }
+    } catch (error) {
+      console.error('Error deleting server:', error);
+    }
+  };
+
+  const handleServerEdit = () => {
+    setShowEditModal(false);
+    setEditingServer(null);
+    onServerUpdated();
+  };
+
+  const formatLastChecked = (lastChecked?: string) => {
+    if (!lastChecked) return 'Never';
+    
+    const date = new Date(lastChecked);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <div className="card">
+      <div className="px-4 py-5 sm:p-6">
+        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+          Server Status
+        </h3>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Server
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Response Time
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Last Checked
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Group
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {servers.map((server) => (
+                <tr key={server.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10">
+                        <div 
+                          className="h-10 w-10 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                          style={{ backgroundColor: server.color }}
+                        >
+                          <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{server.name}</div>
+                        <div className="text-sm text-gray-500">{server.ip_address}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 mr-2">
+                        {getRequestTypeIcon(server.request_type)}
+                      </div>
+                      <span className="text-sm text-gray-900 uppercase">{server.request_type}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getStatusBadge(server.current_status)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {server.response_time ? `${server.response_time}ms` : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatLastChecked(server.last_checked)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      server.server_group === 'iranian' 
+                        ? 'bg-purple-100 text-purple-800' 
+                        : 'bg-indigo-100 text-indigo-800'
+                    }`}>
+                      {server.server_group}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEdit(server)}
+                        className="text-primary-600 hover:text-primary-900"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleToggleStatus(server)}
+                        className={`${
+                          server.is_active 
+                            ? 'text-warning-600 hover:text-warning-900' 
+                            : 'text-success-600 hover:text-success-900'
+                        }`}
+                      >
+                        {server.is_active ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(server)}
+                        className="text-danger-600 hover:text-danger-900"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showEditModal && editingServer && (
+        <EditServerModal
+          server={editingServer}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingServer(null);
+          }}
+          onServerUpdated={handleServerEdit}
+        />
+      )}
+    </div>
+  );
+}

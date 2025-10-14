@@ -1,0 +1,102 @@
+import { NextRequest, NextResponse } from 'next/server';
+import pool from '@/lib/database';
+import { CreateServerData, ServerWithStatus } from '@/lib/types';
+import { verifyToken } from '@/lib/auth';
+import { getMonitoringHistory } from '@/lib/monitoring';
+
+function getAuthToken(request: NextRequest): string | null {
+  return request.cookies.get('auth-token')?.value || null;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const token = getAuthToken(request);
+    if (!token || !verifyToken(token)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const client = await pool.connect();
+    
+    try {
+      const result = await client.query(`
+        SELECT s.*, 
+               md.status as current_status,
+               md.checked_at as last_checked,
+               md.response_time,
+               md.error_message
+        FROM servers s
+        LEFT JOIN LATERAL (
+          SELECT status, checked_at, response_time, error_message
+          FROM monitoring_data
+          WHERE server_id = s.id
+          ORDER BY checked_at DESC
+          LIMIT 1
+        ) md ON true
+        ORDER BY s.created_at DESC
+      `);
+
+      const servers: ServerWithStatus[] = result.rows;
+      return NextResponse.json({ servers });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error fetching servers:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const token = getAuthToken(request);
+    if (!token || !verifyToken(token)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const serverData: CreateServerData = await request.json();
+
+    // Validate required fields
+    if (!serverData.name || !serverData.ip_address || !serverData.request_type) {
+      return NextResponse.json(
+        { error: 'Name, IP address, and request type are required' },
+        { status: 400 }
+      );
+    }
+
+    const client = await pool.connect();
+    
+    try {
+      const result = await client.query(`
+        INSERT INTO servers (name, ip_address, port, request_type, endpoint, expected_status_code, 
+                           check_interval, timeout, server_group, color, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING *
+      `, [
+        serverData.name,
+        serverData.ip_address,
+        serverData.port || null,
+        serverData.request_type,
+        serverData.endpoint || null,
+        serverData.expected_status_code || null,
+        serverData.check_interval,
+        serverData.timeout,
+        serverData.server_group,
+        serverData.color || '#3B82F6',
+        true
+      ]);
+
+      return NextResponse.json({ server: result.rows[0] });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error creating server:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
