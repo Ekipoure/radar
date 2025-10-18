@@ -20,9 +20,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   const fetchData = async () => {
     try {
-      const [statsResponse, serversResponse] = await Promise.all([
+      const [statsResponse, serversResponse, monitoringResponse] = await Promise.all([
         fetch('/api/dashboard/stats'),
-        fetch('/api/servers')
+        fetch('/api/servers'),
+        fetch('/api/monitoring/status') // Initialize monitoring service
       ]);
 
       if (statsResponse.ok) {
@@ -34,6 +35,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         const serversData = await serversResponse.json();
         setServers(serversData.servers);
       }
+
+      if (monitoringResponse.ok) {
+        const monitoringData = await monitoringResponse.json();
+        console.log('Monitoring service status:', monitoringData.status);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -44,6 +50,15 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   useEffect(() => {
     fetchData();
   }, [refreshKey]);
+
+  // Auto-refresh data every 15 seconds to show updated monitoring data
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData();
+    }, 15000); // Refresh every 15 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleServerAdded = () => {
     setShowAddModal(false);

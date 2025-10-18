@@ -34,7 +34,7 @@ class MonitoringManager {
       const status = monitoringService.getStatus();
       if (status.isRunning) {
         console.log('✅ Monitoring service started successfully');
-        console.log('📡 Service will check servers every 30 seconds');
+        console.log('📡 Service will check servers every 10 seconds (respecting individual intervals)');
         this.isInitialized = true;
       } else {
         console.error('❌ Failed to start monitoring service');

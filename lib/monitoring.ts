@@ -179,10 +179,37 @@ export async function getServersForMonitoring(): Promise<Server[]> {
   const client = await pool.connect();
   
   try {
-    const result = await client.query(
-      'SELECT * FROM servers WHERE is_active = true ORDER BY created_at DESC'
-    );
-    console.log(`Found ${result.rows.length} active servers for monitoring`);
+    // Get servers that need to be checked based on their individual intervals
+    const result = await client.query(`
+      SELECT s.*, md.checked_at as last_checked
+      FROM servers s
+      LEFT JOIN LATERAL (
+        SELECT checked_at
+        FROM monitoring_data
+        WHERE server_id = s.id
+        ORDER BY checked_at DESC
+        LIMIT 1
+      ) md ON true
+      WHERE s.is_active = true 
+        AND (
+          md.checked_at IS NULL 
+          OR md.checked_at < NOW() - INTERVAL '1 second' * s.check_interval
+        )
+      ORDER BY s.created_at DESC
+    `);
+    
+    console.log(`Found ${result.rows.length} servers ready for monitoring`);
+    
+    // Debug: Log details about each server
+    result.rows.forEach(server => {
+      const lastChecked = server.last_checked ? new Date(server.last_checked) : null;
+      const now = new Date();
+      const timeSinceLastCheck = lastChecked ? (now.getTime() - lastChecked.getTime()) / 1000 : 'never';
+      const intervalSeconds = server.check_interval;
+      
+      console.log(`Server ${server.name}: interval=${intervalSeconds}s, last_checked=${lastChecked ? lastChecked.toISOString() : 'never'}, time_since=${timeSinceLastCheck}s`);
+    });
+    
     return result.rows;
   } catch (error) {
     console.error('Failed to get servers for monitoring:', error);

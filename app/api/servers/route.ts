@@ -3,6 +3,7 @@ import pool from '@/lib/database';
 import { CreateServerData, ServerWithStatus } from '@/lib/types';
 import { verifyToken } from '@/lib/auth';
 import { getMonitoringHistory } from '@/lib/monitoring';
+import monitoringService from '@/lib/monitoring-service';
 
 function getAuthToken(request: NextRequest): string | null {
   return request.cookies.get('auth-token')?.value || null;
@@ -88,7 +89,17 @@ export async function POST(request: NextRequest) {
         true
       ]);
 
-      return NextResponse.json({ server: result.rows[0] });
+      const newServer = result.rows[0];
+      
+      // Immediately check the new server to avoid "Unknown" status
+      try {
+        await monitoringService.checkServerImmediately(newServer.id);
+      } catch (error) {
+        console.error('Failed to check new server immediately:', error);
+        // Don't fail the request if immediate check fails
+      }
+
+      return NextResponse.json({ server: newServer });
     } finally {
       client.release();
     }

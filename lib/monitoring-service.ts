@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { getServersForMonitoring, monitorServer, saveMonitoringData } from './monitoring';
 import { Server } from './types';
+import pool from './database';
 
 class MonitoringService {
   private isRunning = false;
@@ -15,8 +16,8 @@ class MonitoringService {
     console.log('Starting monitoring service...');
     this.isRunning = true;
 
-    // Run monitoring every 30 seconds
-    this.cronJob = cron.schedule('*/30 * * * * *', async () => {
+    // Run monitoring every 10 seconds to better handle different intervals
+    this.cronJob = cron.schedule('*/10 * * * * *', async () => {
       await this.runMonitoringCycle();
     });
 
@@ -48,15 +49,15 @@ class MonitoringService {
 
   private async runMonitoringCycle() {
     try {
-      console.log('Starting monitoring cycle...');
+      console.log('🔄 Starting monitoring cycle...');
       const servers = await getServersForMonitoring();
       
       if (servers.length === 0) {
-        console.log('No active servers to monitor');
+        console.log('ℹ️ No active servers to monitor');
         return;
       }
 
-      console.log(`Running monitoring cycle for ${servers.length} servers`);
+      console.log(`📊 Running monitoring cycle for ${servers.length} servers`);
 
       // Process servers in parallel with a concurrency limit
       const concurrencyLimit = 10;
@@ -68,22 +69,22 @@ class MonitoringService {
         );
       }
       
-      console.log('Monitoring cycle completed successfully');
+      console.log('✅ Monitoring cycle completed successfully');
     } catch (error) {
-      console.error('Error in monitoring cycle:', error);
+      console.error('❌ Error in monitoring cycle:', error);
       // Don't let errors stop the service - log and continue
     }
   }
 
   private async monitorSingleServer(server: Server) {
     try {
-      console.log(`Monitoring server: ${server.name} (${server.ip_address})`);
+      console.log(`🔍 Monitoring server: ${server.name} (${server.ip_address}) - Type: ${server.request_type}`);
       const result = await monitorServer(server);
       await saveMonitoringData(server.id, result);
       
-      console.log(`Server ${server.name} (${server.ip_address}): ${result.status}${result.response_time ? ` (${result.response_time}ms)` : ''}`);
+      console.log(`✅ Server ${server.name} (${server.ip_address}): ${result.status}${result.response_time ? ` (${result.response_time}ms)` : ''}`);
     } catch (error) {
-      console.error(`Error monitoring server ${server.name}:`, error);
+      console.error(`❌ Error monitoring server ${server.name}:`, error);
       
       try {
         // Save error status
@@ -91,8 +92,9 @@ class MonitoringService {
           status: 'error',
           error_message: error instanceof Error ? error.message : 'Unknown error'
         });
+        console.log(`💾 Saved error status for server ${server.name}`);
       } catch (saveError) {
-        console.error(`Failed to save error status for server ${server.name}:`, saveError);
+        console.error(`❌ Failed to save error status for server ${server.name}:`, saveError);
       }
     }
   }
@@ -103,6 +105,30 @@ class MonitoringService {
       chunks.push(array.slice(i, i + chunkSize));
     }
     return chunks;
+  }
+
+  async checkServerImmediately(serverId: number): Promise<void> {
+    try {
+      console.log(`Checking server ${serverId} immediately...`);
+      const client = await pool.connect();
+      
+      try {
+        const result = await client.query('SELECT * FROM servers WHERE id = $1 AND is_active = true', [serverId]);
+        
+        if (result.rows.length === 0) {
+          console.log(`Server ${serverId} not found or not active`);
+          return;
+        }
+        
+        const server = result.rows[0];
+        await this.monitorSingleServer(server);
+        console.log(`Immediate check completed for server ${server.name}`);
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error(`Error checking server ${serverId} immediately:`, error);
+    }
   }
 
   getStatus() {

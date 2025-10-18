@@ -57,8 +57,8 @@ export async function PUT(
     
     try {
       // Build dynamic query
-      const fields = [];
-      const values = [];
+      const fields: string[] = [];
+      const values: any[] = [];
       let paramCount = 1;
 
       Object.entries(updateData).forEach(([key, value]) => {
