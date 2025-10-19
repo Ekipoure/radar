@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
       const upServers = statusResult.rows.find(r => r.status === 'up')?.count || 0;
       const downServers = statusResult.rows
-        .filter(r => ['down', 'timeout', 'error'].includes(r.status))
+        .filter(r => ['down', 'timeout', 'error', 'skipped'].includes(r.status))
         .reduce((sum, r) => sum + parseInt(r.count), 0);
 
       const stats: DashboardStats = {

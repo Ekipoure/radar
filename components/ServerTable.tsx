@@ -27,6 +27,8 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted 
         return <span className="status-badge status-timeout">Timeout</span>;
       case 'error':
         return <span className="status-badge status-error">Error</span>;
+      case 'skipped':
+        return <span className="status-badge status-skipped">Skipped</span>;
       default:
         return <span className="status-badge status-unknown">Unknown</span>;
     }

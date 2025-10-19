@@ -58,11 +58,23 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS monitoring_data (
         id SERIAL PRIMARY KEY,
         server_id INTEGER REFERENCES servers(id) ON DELETE CASCADE,
-        status VARCHAR(20) NOT NULL CHECK (status IN ('up', 'down', 'timeout', 'error')),
+        status VARCHAR(20) NOT NULL CHECK (status IN ('up', 'down', 'timeout', 'error', 'skipped')),
         response_time INTEGER,
         error_message TEXT,
         checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    // Update existing constraint to include 'skipped' status
+    await client.query(`
+      ALTER TABLE monitoring_data 
+      DROP CONSTRAINT IF EXISTS monitoring_data_status_check
+    `);
+    
+    await client.query(`
+      ALTER TABLE monitoring_data 
+      ADD CONSTRAINT monitoring_data_status_check 
+      CHECK (status IN ('up', 'down', 'timeout', 'error', 'skipped'))
     `);
 
     // Create index for better performance

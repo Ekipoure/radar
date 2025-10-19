@@ -176,20 +176,22 @@ export default function EditServerModal({ server, onClose, onServerUpdated }: Ed
               </div>
             )}
 
-            <div>
-              <label htmlFor="port" className="block text-sm font-medium text-gray-700">
-                Port
-              </label>
-              <input
-                type="number"
-                id="port"
-                name="port"
-                className="input mt-1"
-                value={formData.port || ''}
-                onChange={handleChange}
-                placeholder="e.g., 80, 443, 22"
-              />
-            </div>
+            {(formData.request_type === 'http' || formData.request_type === 'https' || formData.request_type === 'tcp') && (
+              <div>
+                <label htmlFor="port" className="block text-sm font-medium text-gray-700">
+                  Port{formData.request_type === 'tcp' ? '' : ''}
+                </label>
+                <input
+                  type="number"
+                  id="port"
+                  name="port"
+                  className="input mt-1"
+                  value={formData.port || ''}
+                  onChange={handleChange}
+                  placeholder={formData.request_type === 'tcp' ? "e.g., 22, 80, 443 (optional)" : "e.g., 80, 443, 22"}
+                />
+              </div>
+            )}
 
             <div>
               <label htmlFor="check_interval" className="block text-sm font-medium text-gray-700">

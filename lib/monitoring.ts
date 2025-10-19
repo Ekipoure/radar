@@ -5,7 +5,7 @@ import pool from './database';
 import { Server, MonitoringData } from './types';
 
 export interface MonitoringResult {
-  status: 'up' | 'down' | 'timeout' | 'error';
+  status: 'up' | 'down' | 'timeout' | 'error' | 'skipped';
   response_time?: number;
   error_message?: string;
 }
@@ -139,9 +139,10 @@ export async function monitorServer(server: Server): Promise<MonitoringResult> {
 
     case 'tcp':
       if (!port) {
+        // If no port is specified for TCP, skip the check
         return {
-          status: 'error',
-          error_message: 'Port is required for TCP checks'
+          status: 'skipped',
+          error_message: 'TCP check skipped - no port specified'
         };
       }
       return await checkTcpPort(ip_address, port, timeout);

@@ -67,6 +67,10 @@
     @apply bg-gray-100 text-gray-800;
   }
   
+  .status-skipped {
+    @apply bg-gray-100 text-gray-600;
+  }
+  
   .status-unknown {
     @apply bg-gray-100 text-gray-500;
   }

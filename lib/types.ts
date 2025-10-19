@@ -26,14 +26,14 @@ export interface Server {
 export interface MonitoringData {
   id: number;
   server_id: number;
-  status: 'up' | 'down' | 'timeout' | 'error';
+  status: 'up' | 'down' | 'timeout' | 'error' | 'skipped';
   response_time?: number;
   error_message?: string;
   checked_at: string;
 }
 
 export interface ServerWithStatus extends Server {
-  current_status?: 'up' | 'down' | 'timeout' | 'error';
+  current_status?: 'up' | 'down' | 'timeout' | 'error' | 'skipped';
   last_checked?: string;
   response_time?: number;
   error_message?: string;
