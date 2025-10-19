@@ -5,10 +5,12 @@
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
+    direction: ltr;
   }
   
   body {
     @apply bg-gray-50 text-gray-900;
+    direction: ltr;
   }
 }
 
@@ -67,6 +69,16 @@
   
   .status-unknown {
     @apply bg-gray-100 text-gray-500;
+  }
+  
+  .table-ltr {
+    direction: ltr;
+  }
+  
+  .table-ltr th,
+  .table-ltr td {
+    text-align: left;
+    direction: ltr;
   }
 }
 

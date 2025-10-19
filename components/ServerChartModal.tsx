@@ -83,7 +83,8 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
           time: new Date(item.checked_at).toLocaleTimeString('fa-IR', { 
             hour: '2-digit', 
             minute: '2-digit',
-            second: '2-digit'
+            second: '2-digit',
+            timeZone: 'Asia/Tehran'
           }),
           responseTime: item.response_time || 0,
           status: item.status
@@ -502,7 +503,7 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-600">
-                  <span className="font-medium">آخرین بروزرسانی:</span> {new Date().toLocaleString('fa-IR')}
+                  <span className="font-medium">آخرین بروزرسانی:</span> {new Date().toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' })}
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${isRealTime ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
