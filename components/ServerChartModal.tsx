@@ -14,7 +14,7 @@ type TimePeriod = '10min' | '1hour' | '24hours';
 interface ChartDataPoint {
   time: string;
   responseTime: number;
-  status: 'up' | 'down' | 'timeout' | 'error';
+  status: 'up' | 'down' | 'timeout' | 'error' | 'skipped';
 }
 
 export default function ServerChartModal({ server, isOpen, onClose }: ServerChartModalProps) {
@@ -88,7 +88,8 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
           }),
           responseTime: item.response_time || 0,
           status: item.status
-        }));
+        }))
+        .slice(0, 40); // Limit to maximum 35 candles
       
       setChartData(processedData);
     } catch (err) {

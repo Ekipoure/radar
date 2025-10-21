@@ -7,6 +7,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'sans': ['var(--font-vazirmatn)', 'Vazirmatn', 'Inter', 'system-ui', 'sans-serif'],
+        'vazirmatn': ['var(--font-vazirmatn)', 'Vazirmatn', 'sans-serif'],
+      },
       colors: {
         primary: {
           50: '#eff6ff',
