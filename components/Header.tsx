@@ -5,17 +5,22 @@ import { useState } from 'react';
 interface HeaderProps {
   onLogout: () => void;
   onAddServer: () => void;
+  onDeploy: () => void;
 }
 
-export default function Header({ onLogout, onAddServer }: HeaderProps) {
+export default function Header({ onLogout, onAddServer, onDeploy }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
+      // پاک کردن توکن از localStorage
+      localStorage.removeItem('token');
       onLogout();
     } catch (error) {
       console.error('Logout error:', error);
+      // پاک کردن توکن از localStorage حتی اگر API fail شود
+      localStorage.removeItem('token');
       onLogout(); // Still logout locally even if API fails
     }
   };
@@ -38,6 +43,17 @@ export default function Header({ onLogout, onAddServer }: HeaderProps) {
           </div>
 
           <div className="flex items-center space-x-4">
+            <button
+              onClick={onDeploy}
+              className="btn btn-secondary flex items-center"
+            >
+              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              <span className="hidden sm:inline">Deploy Agent</span>
+              <span className="sm:hidden">Agent</span>
+            </button>
+
             <button
               onClick={onAddServer}
               className="btn btn-primary flex items-center"

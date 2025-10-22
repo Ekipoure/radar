@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 
+function getAuthToken(request: NextRequest): string | null {
+  // First try to get token from Authorization header
+  const authHeader = request.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  
+  // Fallback to cookie
+  return request.cookies.get('auth-token')?.value || null;
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('auth-token')?.value;
+    const token = getAuthToken(request);
     
     if (!token) {
       return NextResponse.json({ authenticated: false }, { status: 401 });

@@ -31,6 +31,10 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       const data = await response.json();
 
       if (data.success) {
+        // ذخیره توکن در localStorage
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
         onLogin();
       } else {
         setError(data.message || 'Login failed');

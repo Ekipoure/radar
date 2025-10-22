@@ -14,7 +14,15 @@ export default function DashboardPage() {
     // Check if user is authenticated
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/verify');
+        // Get token from localStorage
+        const token = localStorage.getItem('token');
+        const headers: Record<string, string> = {};
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch('/api/auth/verify', { headers });
         if (response.ok) {
           setIsAuthenticated(true);
         } else {
@@ -35,6 +43,8 @@ export default function DashboardPage() {
   };
 
   const handleLogout = () => {
+    // پاک کردن توکن از localStorage
+    localStorage.removeItem('token');
     setIsAuthenticated(false);
   };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreateServerData } from '@/lib/types';
 
 interface AddServerModalProps {
@@ -24,17 +24,38 @@ export default function AddServerModal({ onClose, onServerAdded }: AddServerModa
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    // Store the current overflow value
+    const originalOverflow = document.body.style.overflow;
+    // Lock the body scroll
+    document.body.style.overflow = 'hidden';
+    
+    // Cleanup function to restore scroll when modal closes
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
+      // Get authentication token
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/servers', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(formData),
       });
 
@@ -60,10 +81,10 @@ export default function AddServerModal({ onClose, onServerAdded }: AddServerModa
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div className="mt-3">
-          <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
+        <div className="px-6 py-6">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-medium text-gray-900">
               Add New Server
             </h3>

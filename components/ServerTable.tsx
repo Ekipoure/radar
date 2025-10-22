@@ -72,11 +72,19 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted 
 
   const handleToggleStatus = async (server: ServerWithStatus) => {
     try {
+      // Get authentication token
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`/api/servers/${server.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ is_active: !server.is_active }),
       });
 
@@ -94,8 +102,17 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted 
     }
 
     try {
+      // Get authentication token
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`/api/servers/${server.id}`, {
         method: 'DELETE',
+        headers,
       });
 
       if (response.ok) {

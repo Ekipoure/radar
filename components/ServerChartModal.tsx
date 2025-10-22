@@ -31,6 +31,21 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
     }
   }, [isOpen, server, selectedPeriod]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Store the current overflow value
+      const originalOverflow = document.body.style.overflow;
+      // Lock the body scroll
+      document.body.style.overflow = 'hidden';
+      
+      // Cleanup function to restore scroll when modal closes
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   // Real-time updates effect
   useEffect(() => {
     if (isRealTime && isOpen && server) {
@@ -68,7 +83,16 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
     
     try {
       const hours = selectedPeriod === '10min' ? 0.17 : selectedPeriod === '1hour' ? 1 : 24;
-      const response = await fetch(`/api/servers/${server.id}/monitoring?hours=${hours}`);
+      
+      // Get authentication token
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`/api/servers/${server.id}/monitoring?hours=${hours}`, { headers });
       
       if (!response.ok) {
         throw new Error('Failed to fetch monitoring data');
@@ -184,58 +208,56 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose}></div>
-        
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden animate-scale-in">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 px-6 py-4 relative overflow-hidden">
-            {/* Animated background pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white to-transparent transform -skew-x-12 animate-pulse"></div>
-            </div>
-            
-            <div className="flex items-center justify-between relative z-10">
-              <div className="flex items-center space-x-4">
-                <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center border-4 border-white shadow-lg relative"
-                  style={{ backgroundColor: server.color }}
-                >
-                  {/* Pulsing ring for active servers */}
-                  {server.current_status === 'up' && (
-                    <div className="absolute inset-0 rounded-full border-2 border-white animate-ping opacity-75"></div>
-                  )}
-                  <svg className="h-6 w-6 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white">{server.name}</h2>
-                  <p className="text-blue-100">{server.ip_address}</p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <div className={`w-2 h-2 rounded-full ${
-                      server.current_status === 'up' ? 'bg-green-400' : 
-                      server.current_status === 'down' ? 'bg-red-400' : 
-                      server.current_status === 'timeout' ? 'bg-yellow-400' : 'bg-gray-400'
-                    }`}></div>
-                    <span className="text-blue-200 text-sm">
-                      {server.current_status === 'up' ? 'آنلاین' : 
-                       server.current_status === 'down' ? 'آفلاین' : 
-                       server.current_status === 'timeout' ? 'تایم‌اوت' : 'خطا'}
-                    </span>
-                  </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose}></div>
+      
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden animate-scale-in">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 px-6 py-4 relative overflow-hidden">
+          {/* Animated background pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white to-transparent transform -skew-x-12 animate-pulse"></div>
+          </div>
+          
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex items-center space-x-4">
+              <div 
+                className="w-12 h-12 rounded-full flex items-center justify-center border-4 border-white shadow-lg relative"
+                style={{ backgroundColor: server.color }}
+              >
+                {/* Pulsing ring for active servers */}
+                {server.current_status === 'up' && (
+                  <div className="absolute inset-0 rounded-full border-2 border-white animate-ping opacity-75"></div>
+                )}
+                <svg className="h-6 w-6 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">{server.name}</h2>
+                <p className="text-blue-100">{server.ip_address}</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <div className={`w-2 h-2 rounded-full ${
+                    server.current_status === 'up' ? 'bg-green-400' : 
+                    server.current_status === 'down' ? 'bg-red-400' : 
+                    server.current_status === 'timeout' ? 'bg-yellow-400' : 'bg-gray-400'
+                  }`}></div>
+                  <span className="text-blue-200 text-sm">
+                    {server.current_status === 'up' ? 'آنلاین' : 
+                     server.current_status === 'down' ? 'آفلاین' : 
+                     server.current_status === 'timeout' ? 'تایم‌اوت' : 'خطا'}
+                  </span>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="text-white hover:text-gray-200 transition-colors p-2 rounded-lg hover:bg-white hover:bg-opacity-20"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
             </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:text-gray-200 transition-colors p-2 rounded-lg hover:bg-white hover:bg-opacity-20"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
 
           {/* Time Period Selector */}

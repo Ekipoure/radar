@@ -63,3 +63,59 @@ export interface CreateServerData {
 export interface UpdateServerData extends Partial<CreateServerData> {
   is_active?: boolean;
 }
+
+export interface Agent {
+  id: number;
+  name: string;
+  server_ip: string;
+  username: string;
+  repo_url: string;
+  status: 'deployed' | 'deploying' | 'failed' | 'stopped';
+  deployed_at: string;
+  last_checked?: string;
+  port: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAgentData {
+  name: string;
+  server_ip: string;
+  username: string;
+  repo_url: string;
+  port?: number;
+}
+
+export interface UpdateAgentData extends Partial<CreateAgentData> {
+  status?: 'deployed' | 'deploying' | 'failed' | 'stopped';
+  is_active?: boolean;
+}
+
+export interface DeployedServer {
+  id: number;
+  name: string;
+  server_ip: string;
+  username: string;
+  repo_url: string;
+  status: 'deployed' | 'deploying' | 'failed' | 'stopped';
+  deployed_at: string;
+  last_checked?: string;
+  port: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateDeployedServerData {
+  name: string;
+  server_ip: string;
+  username: string;
+  repo_url: string;
+  port?: number;
+}
+
+export interface UpdateDeployedServerData extends Partial<CreateDeployedServerData> {
+  status?: 'deployed' | 'deploying' | 'failed' | 'stopped';
+  is_active?: boolean;
+}

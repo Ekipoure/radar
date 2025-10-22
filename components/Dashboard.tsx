@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DashboardStats, ServerWithStatus } from '@/lib/types';
+import { DashboardStats, ServerWithStatus, DeployedServer, Agent } from '@/lib/types';
 import StatsCards from './StatsCards';
 import ServerTable from './ServerTable';
+import DeployedServerTable from './DeployedServerTable';
+import AgentTable from './AgentTable';
 import AddServerModal from './AddServerModal';
+import DeployModal from './DeployModal';
 import Header from './Header';
 
 interface DashboardProps {
@@ -14,15 +17,24 @@ interface DashboardProps {
 export default function Dashboard({ onLogout }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [servers, setServers] = useState<ServerWithStatus[]>([]);
+  const [deployedServers, setDeployedServers] = useState<DeployedServer[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDeployModal, setShowDeployModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTable, setActiveTable] = useState<'servers' | 'agents'>('servers');
 
   const fetchData = async () => {
     try {
-      const [statsResponse, serversResponse, monitoringResponse] = await Promise.all([
-        fetch('/api/dashboard/stats'),
-        fetch('/api/servers'),
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      const [statsResponse, serversResponse, deployedServersResponse, agentsResponse, monitoringResponse] = await Promise.all([
+        fetch('/api/dashboard/stats', { headers }),
+        fetch('/api/servers', { headers }),
+        fetch('/api/deployed-servers', { headers }),
+        fetch('/api/agents', { headers }),
         fetch('/api/monitoring/status') // Initialize monitoring service
       ]);
 
@@ -34,6 +46,16 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       if (serversResponse.ok) {
         const serversData = await serversResponse.json();
         setServers(serversData.servers);
+      }
+
+      if (deployedServersResponse.ok) {
+        const deployedServersData = await deployedServersResponse.json();
+        setDeployedServers(deployedServersData.deployedServers);
+      }
+
+      if (agentsResponse.ok) {
+        const agentsData = await agentsResponse.json();
+        setAgents(agentsData.agents);
       }
 
       if (monitoringResponse.ok) {
@@ -73,6 +95,18 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleDeploy = () => {
+    setShowDeployModal(true);
+  };
+
+  const handleDeployedServerUpdated = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleDeployedServerDeleted = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -83,17 +117,54 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="ltr">
-      <Header onLogout={onLogout} onAddServer={() => setShowAddModal(true)} />
+      <Header onLogout={onLogout} onAddServer={() => setShowAddModal(true)} onDeploy={handleDeploy} />
       
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {stats && <StatsCards stats={stats} />}
         
         <div className="mt-8">
-          <ServerTable 
-            servers={servers}
-            onServerUpdated={handleServerUpdated}
-            onServerDeleted={handleServerDeleted}
-          />
+          {/* Table Toggle Buttons */}
+          <div className="mb-6">
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setActiveTable('servers')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  activeTable === 'servers'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                سرورها
+              </button>
+              <button
+                onClick={() => setActiveTable('agents')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  activeTable === 'agents'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                ایجنت‌ها
+              </button>
+            </div>
+          </div>
+
+          {/* Conditional Table Rendering */}
+          {activeTable === 'servers' && (
+            <ServerTable 
+              servers={servers}
+              onServerUpdated={handleServerUpdated}
+              onServerDeleted={handleServerDeleted}
+            />
+          )}
+          
+          {activeTable === 'agents' && (
+            <AgentTable 
+              agents={agents}
+              onAgentUpdated={handleDeployedServerUpdated}
+              onAgentDeleted={handleDeployedServerDeleted}
+            />
+          )}
         </div>
       </main>
 
@@ -101,6 +172,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         <AddServerModal
           onClose={() => setShowAddModal(false)}
           onServerAdded={handleServerAdded}
+        />
+      )}
+
+      {showDeployModal && (
+        <DeployModal
+          isOpen={showDeployModal}
+          onClose={() => setShowDeployModal(false)}
         />
       )}
     </div>

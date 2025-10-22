@@ -58,24 +58,32 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS monitoring_data (
         id SERIAL PRIMARY KEY,
         server_id INTEGER REFERENCES servers(id) ON DELETE CASCADE,
-        status VARCHAR(20) NOT NULL CHECK (status IN ('up', 'down', 'timeout', 'error', 'skipped')),
+        status VARCHAR(20) NOT NULL,
         response_time INTEGER,
         error_message TEXT,
         checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Update existing constraint to include 'skipped' status
-    await client.query(`
-      ALTER TABLE monitoring_data 
-      DROP CONSTRAINT IF EXISTS monitoring_data_status_check
-    `);
-    
-    await client.query(`
-      ALTER TABLE monitoring_data 
-      ADD CONSTRAINT monitoring_data_status_check 
-      CHECK (status IN ('up', 'down', 'timeout', 'error', 'skipped'))
-    `);
+    // Add constraint to monitoring_data table
+    try {
+      // First check if constraint already exists
+      const constraintExists = await client.query(`
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'monitoring_data_status_check' 
+        AND table_name = 'monitoring_data'
+      `);
+      
+      if (constraintExists.rows.length === 0) {
+        await client.query(`
+          ALTER TABLE monitoring_data 
+          ADD CONSTRAINT monitoring_data_status_check 
+          CHECK (status IN ('up', 'down', 'timeout', 'error', 'skipped'))
+        `);
+      }
+    } catch (error) {
+      console.log('Warning: Could not add monitoring_data constraint:', error.message);
+    }
 
     // Create index for better performance
     await client.query(`
@@ -87,6 +95,89 @@ export async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_monitoring_data_checked_at 
       ON monitoring_data(checked_at)
     `);
+
+    // Create agents table (renamed from deployed_servers)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS agents (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        server_ip VARCHAR(45) NOT NULL,
+        username VARCHAR(100) NOT NULL,
+        repo_url VARCHAR(500) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'deployed' CHECK (status IN ('deployed', 'deploying', 'failed', 'stopped')),
+        deployed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_checked TIMESTAMP,
+        port INTEGER DEFAULT 3000,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create deployed_servers table (keeping for backward compatibility)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS deployed_servers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        server_ip VARCHAR(45) NOT NULL,
+        username VARCHAR(100) NOT NULL,
+        repo_url VARCHAR(500) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'deployed' CHECK (status IN ('deployed', 'deploying', 'failed', 'stopped')),
+        deployed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_checked TIMESTAMP,
+        port INTEGER DEFAULT 3000,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create indexes for agents table (with error handling)
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_agents_status 
+        ON agents(status)
+      `);
+    } catch (error) {
+      console.log('Index idx_agents_status might already exist or table not ready');
+    }
+
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_agents_is_active 
+        ON agents(is_active)
+      `);
+    } catch (error) {
+      console.log('Index idx_agents_is_active might already exist or table not ready');
+    }
+
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_agents_deployed_at 
+        ON agents(deployed_at)
+      `);
+    } catch (error) {
+      console.log('Index idx_agents_deployed_at might already exist or table not ready');
+    }
+
+    // Create indexes for deployed_servers (with error handling)
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_deployed_servers_status 
+        ON deployed_servers(status)
+      `);
+    } catch (error) {
+      console.log('Index idx_deployed_servers_status might already exist or table not ready');
+    }
+
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_deployed_servers_deployed_at 
+        ON deployed_servers(deployed_at)
+      `);
+    } catch (error) {
+      console.log('Index idx_deployed_servers_deployed_at might already exist or table not ready');
+    }
 
     // Insert default admin user if not exists
     const adminExists = await client.query('SELECT id FROM users WHERE username = $1', ['admin']);
