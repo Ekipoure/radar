@@ -17,6 +17,8 @@ interface DeployConfig {
   envContent: string;
   targetPath: string;
   usePM2: boolean;
+  deploymentMode: 'git' | 'upload';
+  uploadedFile?: File;
 }
 
 interface DeployResult {
@@ -35,7 +37,8 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
     repoUrl: '',
     envContent: '',
     targetPath: '/var/www/project',
-    usePM2: true
+    usePM2: true,
+    deploymentMode: 'git'
   });
 
   const [isDeploying, setIsDeploying] = useState(false);
@@ -76,8 +79,17 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
       setDeployProgress('Validating configuration...');
       
       // Basic client-side validation
-      if (!config.agentName || !config.serverIp || !config.username || !config.password || !config.repoUrl || !config.envContent.trim()) {
+      if (!config.agentName || !config.serverIp || !config.username || !config.password) {
         throw new Error('Please fill in all required fields');
+      }
+
+      // Validate based on deployment mode
+      if (config.deploymentMode === 'git' && !config.repoUrl) {
+        throw new Error('Repository URL is required for Git deployment');
+      }
+      
+      if (config.deploymentMode === 'upload' && !config.uploadedFile) {
+        throw new Error('Please select a ZIP file for upload deployment');
       }
 
       // Check if it's a localhost IP (common mistake)
@@ -85,23 +97,53 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
         throw new Error('Please use the actual server IP address, not localhost');
       }
 
-      setDeployProgress('Connecting to server...');
+      setDeployProgress('Preparing deployment data...');
       
       // Get authentication token
       const token = localStorage.getItem('token');
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
+      const headers: Record<string, string> = {};
       
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
-      const response = await fetch('/api/deploy', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(config),
-      });
+
+      let response: Response;
+
+      if (config.deploymentMode === 'upload' && config.uploadedFile) {
+        // Handle file upload
+        setDeployProgress('Uploading file...');
+        
+        const formData = new FormData();
+        formData.append('agentName', config.agentName);
+        formData.append('serverIp', config.serverIp);
+        formData.append('username', config.username);
+        formData.append('password', config.password);
+        formData.append('envContent', config.envContent);
+        formData.append('targetPath', config.targetPath);
+        formData.append('usePM2', config.usePM2.toString());
+        formData.append('deploymentMode', config.deploymentMode);
+        formData.append('file', config.uploadedFile);
+
+        response = await fetch('/api/deploy', {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+      } else {
+        // Handle git deployment
+        setDeployProgress('Connecting to server...');
+        
+        headers['Content-Type'] = 'application/json';
+        
+        response = await fetch('/api/deploy', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            ...config,
+            deploymentMode: config.deploymentMode
+          }),
+        });
+      }
 
       setDeployProgress('Processing deployment...');
       
@@ -132,7 +174,8 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
       repoUrl: '',
       envContent: '',
       targetPath: '/var/www/project',
-      usePM2: true
+      usePM2: true,
+      deploymentMode: 'git'
     });
     setDeployResult(null);
     setShowLogs(false);
@@ -236,25 +279,109 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
             </div>
           </div>
 
-          {/* Repository URL */}
+          {/* Deployment Mode Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Repository URL
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Deployment Method
             </label>
-            <input
-              type="url"
-              value={config.repoUrl}
-              onChange={(e) => handleInputChange('repoUrl', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://github.com/username/repository.git"
-              disabled={isDeploying}
-            />
+            <div className="space-y-3">
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="git-mode"
+                  name="deploymentMode"
+                  value="git"
+                  checked={config.deploymentMode === 'git'}
+                  onChange={(e) => handleInputChange('deploymentMode', e.target.value)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  disabled={isDeploying}
+                />
+                <label htmlFor="git-mode" className="ml-2 block text-sm text-gray-700">
+                  Clone from GitHub Repository
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="upload-mode"
+                  name="deploymentMode"
+                  value="upload"
+                  checked={config.deploymentMode === 'upload'}
+                  onChange={(e) => handleInputChange('deploymentMode', e.target.value)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  disabled={isDeploying}
+                />
+                <label htmlFor="upload-mode" className="ml-2 block text-sm text-gray-700">
+                  Upload Project ZIP File
+                </label>
+              </div>
+            </div>
           </div>
+
+          {/* Repository URL - Only show when git mode is selected */}
+          {config.deploymentMode === 'git' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Repository URL
+              </label>
+              <input
+                type="url"
+                value={config.repoUrl}
+                onChange={(e) => handleInputChange('repoUrl', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="https://github.com/username/repository.git"
+                disabled={isDeploying}
+              />
+            </div>
+          )}
+
+          {/* File Upload - Only show when upload mode is selected */}
+          {config.deploymentMode === 'upload' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Project ZIP File
+              </label>
+              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-gray-400 transition-colors">
+                <div className="space-y-1 text-center">
+                  <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <div className="flex text-sm text-gray-600">
+                    <label
+                      htmlFor="file-upload"
+                      className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                    >
+                      <span>Upload a file</span>
+                      <input
+                        id="file-upload"
+                        name="file-upload"
+                        type="file"
+                        accept=".zip"
+                        className="sr-only"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleInputChange('uploadedFile', file);
+                          }
+                        }}
+                        disabled={isDeploying}
+                      />
+                    </label>
+                    <p className="pl-1">or drag and drop</p>
+                  </div>
+                  <p className="text-xs text-gray-500">ZIP files only</p>
+                  {config.uploadedFile && (
+                    <p className="text-sm text-green-600 font-medium">
+                      Selected: {config.uploadedFile.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Environment Variables */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Environment Variables (.env content)
+              Environment Variables (.env content) <span className="text-gray-500 text-sm">(Optional)</span>
             </label>
             <textarea
               value={config.envContent}
@@ -304,7 +431,7 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
             </button>
             <button
               onClick={handleDeploy}
-              disabled={isDeploying || !config.agentName || !config.serverIp || !config.username || !config.password || !config.repoUrl}
+              disabled={isDeploying || !config.agentName || !config.serverIp || !config.username || !config.password || (config.deploymentMode === 'git' && !config.repoUrl) || (config.deploymentMode === 'upload' && !config.uploadedFile)}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {isDeploying ? (
