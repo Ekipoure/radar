@@ -61,7 +61,7 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
     }
   }, [isOpen]);
 
-  const handleInputChange = (field: keyof DeployConfig, value: string | boolean) => {
+  const handleInputChange = (field: keyof DeployConfig, value: string | boolean | File) => {
     setConfig(prev => ({
       ...prev,
       [field]: value

@@ -28,14 +28,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : undefined;
 
-      const [statsResponse, serversResponse, deployedServersResponse, agentsResponse, monitoringResponse] = await Promise.all([
+      const [statsResponse, serversResponse, agentsResponse] = await Promise.all([
         fetch('/api/dashboard/stats', { headers }),
         fetch('/api/servers', { headers }),
-        fetch('/api/deployed-servers', { headers }),
-        fetch('/api/agents', { headers }),
-        fetch('/api/monitoring/status') // Initialize monitoring service
+        fetch('/api/agents', { headers })
       ]);
 
       if (statsResponse.ok) {
@@ -48,20 +46,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         setServers(serversData.servers);
       }
 
-      if (deployedServersResponse.ok) {
-        const deployedServersData = await deployedServersResponse.json();
-        setDeployedServers(deployedServersData.deployedServers);
-      }
-
       if (agentsResponse.ok) {
         const agentsData = await agentsResponse.json();
         setAgents(agentsData.agents);
       }
 
-      if (monitoringResponse.ok) {
-        const monitoringData = await monitoringResponse.json();
-        console.log('Monitoring service status:', monitoringData.status);
-      }
+      setDeployedServers([]); // Not used in this version
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {

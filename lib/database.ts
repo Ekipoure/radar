@@ -53,11 +53,18 @@ export async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#3B82F6'
     `);
 
+    // Add source_ip column to existing monitoring_data table if it doesn't exist
+    await client.query(`
+      ALTER TABLE monitoring_data 
+      ADD COLUMN IF NOT EXISTS source_ip VARCHAR(45)
+    `);
+
     // Create monitoring_data table for historical data
     await client.query(`
       CREATE TABLE IF NOT EXISTS monitoring_data (
         id SERIAL PRIMARY KEY,
         server_id INTEGER REFERENCES servers(id) ON DELETE CASCADE,
+        source_ip VARCHAR(45),
         status VARCHAR(20) NOT NULL,
         response_time INTEGER,
         error_message TEXT,
@@ -82,7 +89,7 @@ export async function initializeDatabase() {
         `);
       }
     } catch (error) {
-      console.log('Warning: Could not add monitoring_data constraint:', error.message);
+      console.log('Warning: Could not add monitoring_data constraint:', error instanceof Error ? error.message : 'Unknown error');
     }
 
     // Create index for better performance

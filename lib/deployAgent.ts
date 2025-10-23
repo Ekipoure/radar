@@ -464,12 +464,25 @@ except Exception as e:
       await this.executeSSHCommand(conn, `cd ${this.config.targetPath} && npm install`);
       this.log('✓ Dependencies installed');
       
-      // Fix permissions for node_modules binaries
-      this.log('Fixing node_modules permissions...');
+      // Fix permissions and symlinks for node_modules binaries
+      this.log('Fixing node_modules permissions and symlinks...');
       try {
+        // Fix permissions
         await this.executeSSHCommand(conn, `chmod -R +x ${this.config.targetPath}/node_modules/.bin/ 2>/dev/null || true`);
         await this.executeSSHCommand(conn, `find ${this.config.targetPath}/node_modules/.bin/ -type f -exec chmod +x {} \\; 2>/dev/null || true`);
-        this.log('✓ Node modules permissions fixed');
+        
+        // Reinstall broken packages
+        this.log('Reinstalling TypeScript and ts-node...');
+        await this.executeSSHCommand(conn, `cd ${this.config.targetPath} && npm install typescript ts-node --force`);
+        
+        // Fix symlinks
+        await this.executeSSHCommand(conn, `cd ${this.config.targetPath} && npm rebuild`);
+        
+        // Ensure all binaries are executable
+        await this.executeSSHCommand(conn, `find ${this.config.targetPath}/node_modules/.bin/ -type f -exec chmod +x {} \\; 2>/dev/null || true`);
+        await this.executeSSHCommand(conn, `find ${this.config.targetPath}/node_modules/ -name "*.js" -exec chmod +x {} \\; 2>/dev/null || true`);
+        
+        this.log('✓ Node modules permissions and symlinks fixed');
       } catch (permError) {
         this.log(`Warning: Could not fix node_modules permissions: ${permError instanceof Error ? permError.message : 'Unknown error'}`);
       }
@@ -535,12 +548,94 @@ except Exception as e:
       // Start the application
       this.log('Starting the application...');
       const targetPath = this.config.targetPath || '/var/www/project';
+      
+      // Try different start methods
+      let startSuccessful = false;
+      
       if (this.config.usePM2) {
-        await this.executeSSHCommand(conn, `cd ${targetPath} && pm2 start npm --name "${path.basename(targetPath)}" -- start`);
-        this.log('✓ Application started with PM2');
+        try {
+          // Method 1: Try npm start with PM2
+          this.log('Trying npm start with PM2...');
+          await this.executeSSHCommand(conn, `cd ${targetPath} && pm2 start npm --name "${path.basename(targetPath)}" -- start`);
+          this.log('✓ Application started with PM2 (npm start)');
+          startSuccessful = true;
+        } catch (npmStartError) {
+          this.log(`npm start failed: ${npmStartError instanceof Error ? npmStartError.message : 'Unknown error'}`);
+          
+          try {
+            // Method 2: Try with compiled JavaScript
+            this.log('Trying with compiled JavaScript...');
+            await this.executeSSHCommand(conn, `cd ${targetPath} && pm2 start dist/server-monitor.js --name "${path.basename(targetPath)}"`);
+            this.log('✓ Application started with PM2 (compiled JS)');
+            startSuccessful = true;
+          } catch (compiledError) {
+            this.log(`Compiled JS failed: ${compiledError instanceof Error ? compiledError.message : 'Unknown error'}`);
+            
+            try {
+              // Method 3: Try with ts-node directly
+              this.log('Trying with ts-node directly...');
+              await this.executeSSHCommand(conn, `cd ${targetPath} && pm2 start "npx ts-node server-monitor.ts" --name "${path.basename(targetPath)}"`);
+              this.log('✓ Application started with PM2 (ts-node)');
+              startSuccessful = true;
+            } catch (tsNodeError) {
+              this.log(`ts-node failed: ${tsNodeError instanceof Error ? tsNodeError.message : 'Unknown error'}`);
+              
+              try {
+                // Method 4: Try with node directly
+                this.log('Trying with node directly...');
+                await this.executeSSHCommand(conn, `cd ${targetPath} && pm2 start "node server-monitor.ts" --name "${path.basename(targetPath)}"`);
+                this.log('✓ Application started with PM2 (node)');
+                startSuccessful = true;
+              } catch (nodeError) {
+                this.log(`node failed: ${nodeError instanceof Error ? nodeError.message : 'Unknown error'}`);
+              }
+            }
+          }
+        }
       } else {
-        await this.executeSSHCommand(conn, `cd ${targetPath} && nohup npm start > app.log 2>&1 &`);
-        this.log('✓ Application started in background');
+        try {
+          // Method 1: Try npm start in background
+          this.log('Trying npm start in background...');
+          await this.executeSSHCommand(conn, `cd ${targetPath} && nohup npm start > app.log 2>&1 &`);
+          this.log('✓ Application started in background (npm start)');
+          startSuccessful = true;
+        } catch (npmStartError) {
+          this.log(`npm start failed: ${npmStartError instanceof Error ? npmStartError.message : 'Unknown error'}`);
+          
+          try {
+            // Method 2: Try with compiled JavaScript
+            this.log('Trying with compiled JavaScript...');
+            await this.executeSSHCommand(conn, `cd ${targetPath} && nohup node dist/server-monitor.js > app.log 2>&1 &`);
+            this.log('✓ Application started in background (compiled JS)');
+            startSuccessful = true;
+          } catch (compiledError) {
+            this.log(`Compiled JS failed: ${compiledError instanceof Error ? compiledError.message : 'Unknown error'}`);
+            
+            try {
+              // Method 3: Try with ts-node directly
+              this.log('Trying with ts-node directly...');
+              await this.executeSSHCommand(conn, `cd ${targetPath} && nohup npx ts-node server-monitor.ts > app.log 2>&1 &`);
+              this.log('✓ Application started in background (ts-node)');
+              startSuccessful = true;
+            } catch (tsNodeError) {
+              this.log(`ts-node failed: ${tsNodeError instanceof Error ? tsNodeError.message : 'Unknown error'}`);
+              
+              try {
+                // Method 4: Try with node directly
+                this.log('Trying with node directly...');
+                await this.executeSSHCommand(conn, `cd ${targetPath} && nohup node server-monitor.ts > app.log 2>&1 &`);
+                this.log('✓ Application started in background (node)');
+                startSuccessful = true;
+              } catch (nodeError) {
+                this.log(`node failed: ${nodeError instanceof Error ? nodeError.message : 'Unknown error'}`);
+              }
+            }
+          }
+        }
+      }
+      
+      if (!startSuccessful) {
+        this.log('⚠️ Warning: Could not start the application with any method');
       }
 
       // Save PM2 configuration

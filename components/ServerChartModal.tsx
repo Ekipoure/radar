@@ -98,12 +98,12 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
         throw new Error('Failed to fetch monitoring data');
       }
       
-      const data: MonitoringData[] = await response.json();
+      const data = await response.json();
       
       // Process data for chart
       const processedData = data
-        .sort((a, b) => new Date(a.checked_at).getTime() - new Date(b.checked_at).getTime())
-        .map(item => ({
+        .sort((a: any, b: any) => new Date(a.checked_at).getTime() - new Date(b.checked_at).getTime())
+        .map((item: any) => ({
           time: new Date(item.checked_at).toLocaleTimeString('fa-IR', { 
             hour: '2-digit', 
             minute: '2-digit',
@@ -113,7 +113,7 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
           responseTime: item.response_time || 0,
           status: item.status
         }))
-        .slice(0, 40); // Limit to maximum 35 candles
+        .slice(0, 40); // Limit to maximum 40 candles
       
       setChartData(processedData);
     } catch (err) {

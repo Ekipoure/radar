@@ -6,6 +6,7 @@ import { MonitoringData, ServerWithStatus } from '@/lib/types';
 interface ServerChartProps {
   server: ServerWithStatus;
   className?: string;
+  timeRange?: number;
 }
 
 interface ChartData {
@@ -30,10 +31,9 @@ const statusLabels = {
   skipped: 'رد شده'
 };
 
-export default function ServerChart({ server, className = '' }: ServerChartProps) {
+export default function ServerChart({ server, className = '', timeRange = 6 }: ServerChartProps) {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState(6); // 6 hours default
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -59,16 +59,18 @@ export default function ServerChart({ server, className = '' }: ServerChartProps
       }
       
       console.log(`Fetching monitoring data for server ${server.id} with ${timeRange} hours`);
+      
+      // Use API endpoint instead of direct database access
       const response = await fetch(`/api/public/servers/${server.id}/monitoring?hours=${timeRange}`);
       console.log(`Response status: ${response.status}`);
       
       if (response.ok) {
-        const data: MonitoringData[] = await response.json();
+        const data = await response.json();
         console.log(`Received ${data.length} monitoring records for server ${server.id}:`, data);
         
         // Convert to chart data and sort by time
         const chartData: ChartData[] = data
-          .map(item => ({
+          .map((item: any) => ({
             time: new Date(item.checked_at).toLocaleString('fa-IR', {
               timeZone: 'Asia/Tehran',
               hour: '2-digit',
@@ -79,8 +81,8 @@ export default function ServerChart({ server, className = '' }: ServerChartProps
             status: item.status,
             responseTime: item.response_time
           }))
-          .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
-          .slice(0, 100 ); // Limit to maximum 35 candles
+          .sort((a: ChartData, b: ChartData) => new Date(a.time).getTime() - new Date(b.time).getTime())
+          .slice(0, 100); // Limit to maximum 100 candles
         
         console.log(`Processed chart data:`, chartData);
         setChartData(chartData);
@@ -112,12 +114,6 @@ export default function ServerChart({ server, className = '' }: ServerChartProps
     return () => clearInterval(interval);
   }, [server.id, timeRange]);
 
-  // Separate effect for timeRange changes to avoid conflicts
-  useEffect(() => {
-    if (!isInitialLoad) {
-      fetchChartData(true);
-    }
-  }, [timeRange]);
 
   const getStatusCounts = () => {
     const counts = chartData.reduce((acc, item) => {
@@ -194,22 +190,6 @@ export default function ServerChart({ server, className = '' }: ServerChartProps
         </div>
         
         
-        {/* Time Range Selector */}
-        <div className="flex gap-2">
-          {[1, 3, 6, 12, 24].map(hours => (
-            <button
-              key={hours}
-              onClick={() => setTimeRange(hours)}
-              className={`px-3 py-1 text-xs rounded-lg transition-colors ${
-                timeRange === hours
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {hours} ساعت
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Stats Cards */}

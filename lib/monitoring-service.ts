@@ -80,6 +80,8 @@ class MonitoringService {
     try {
       console.log(`🔍 Monitoring server: ${server.name} (${server.ip_address}) - Type: ${server.request_type}`);
       const result = await monitorServer(server);
+      // For now, we'll save without source_ip since this runs on the main server
+      // In a real deployment, agents would send their monitoring data with source_ip
       await saveMonitoringData(server.id, result);
       
       console.log(`✅ Server ${server.name} (${server.ip_address}): ${result.status}${result.response_time ? ` (${result.response_time}ms)` : ''}`);

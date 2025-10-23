@@ -2,7 +2,7 @@ import ping from 'ping';
 import axios from 'axios';
 import net from 'net';
 import pool from './database';
-import { Server, MonitoringData } from './types';
+import { Server, MonitoringData, ServerWithStatus, DashboardStats } from './types';
 
 export interface MonitoringResult {
   status: 'up' | 'down' | 'timeout' | 'error' | 'skipped';
@@ -157,17 +157,18 @@ export async function monitorServer(server: Server): Promise<MonitoringResult> {
 
 export async function saveMonitoringData(
   serverId: number, 
-  result: MonitoringResult
+  result: MonitoringResult,
+  sourceIp?: string
 ): Promise<void> {
   const client = await pool.connect();
   
   try {
     await client.query(
-      `INSERT INTO monitoring_data (server_id, status, response_time, error_message) 
-       VALUES ($1, $2, $3, $4)`,
-      [serverId, result.status, result.response_time, result.error_message]
+      `INSERT INTO monitoring_data (server_id, source_ip, status, response_time, error_message) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [serverId, sourceIp, result.status, result.response_time, result.error_message]
     );
-    console.log(`Saved monitoring data for server ${serverId}: ${result.status}`);
+    console.log(`Saved monitoring data for server ${serverId} from source ${sourceIp || 'unknown'}: ${result.status}`);
   } catch (error) {
     console.error(`Failed to save monitoring data for server ${serverId}:`, error);
     throw error; // Re-throw to be handled by caller
@@ -234,6 +235,128 @@ export async function getMonitoringHistory(
       [serverId]
     );
     return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getMonitoringDataBySource(
+  sourceIp: string,
+  hours: number = 24
+): Promise<MonitoringData[]> {
+  const client = await pool.connect();
+  
+  try {
+    const result = await client.query(
+      `SELECT md.*, s.name as server_name, s.color as server_color
+       FROM monitoring_data md
+       JOIN servers s ON md.server_id = s.id
+       WHERE md.source_ip = $1 AND md.checked_at >= NOW() - INTERVAL '${hours} hours'
+       ORDER BY md.checked_at DESC`,
+      [sourceIp]
+    );
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getAgentsWithMonitoringData(hours: number = 24): Promise<any[]> {
+  const client = await pool.connect();
+  
+  try {
+    const result = await client.query(`
+      SELECT DISTINCT 
+        a.id,
+        a.name,
+        a.server_ip::text as server_ip,
+        a.status as agent_status,
+        a.deployed_at,
+        a.last_checked as agent_last_checked,
+        COUNT(md.id) as monitoring_count,
+        MAX(md.checked_at) as last_monitoring_check
+      FROM agents a
+      LEFT JOIN monitoring_data md ON md.source_ip::text = a.server_ip::text 
+        AND md.checked_at >= NOW() - INTERVAL '${hours} hours'
+      WHERE a.is_active = true
+      GROUP BY a.id, a.name, a.server_ip, a.status, a.deployed_at, a.last_checked
+      ORDER BY a.name
+    `);
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getServersWithStatus(): Promise<ServerWithStatus[]> {
+  const client = await pool.connect();
+  
+  try {
+    const result = await client.query(`
+      SELECT 
+        s.*,
+        md.status as current_status,
+        md.checked_at as last_checked
+      FROM servers s
+      LEFT JOIN LATERAL (
+        SELECT status, checked_at
+        FROM monitoring_data
+        WHERE server_id = s.id
+        ORDER BY checked_at DESC
+        LIMIT 1
+      ) md ON true
+      WHERE s.is_active = true
+      ORDER BY s.created_at DESC
+    `);
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const client = await pool.connect();
+  
+  try {
+    // Get total servers
+    const serversResult = await client.query('SELECT COUNT(*) as total FROM servers WHERE is_active = true');
+    const totalServers = parseInt(serversResult.rows[0].total);
+
+    // Get total agents
+    const agentsResult = await client.query('SELECT COUNT(*) as total FROM agents WHERE is_active = true');
+    const totalAgents = parseInt(agentsResult.rows[0].total);
+
+    // Get monitoring data from last 24 hours
+    const monitoringResult = await client.query(`
+      SELECT 
+        COUNT(*) as total_checks,
+        COUNT(CASE WHEN status = 'up' THEN 1 END) as up_count,
+        COUNT(CASE WHEN status = 'down' THEN 1 END) as down_count,
+        COUNT(CASE WHEN status = 'timeout' THEN 1 END) as timeout_count,
+        COUNT(CASE WHEN status = 'error' THEN 1 END) as error_count
+      FROM monitoring_data 
+      WHERE checked_at >= NOW() - INTERVAL '24 hours'
+    `);
+
+    const monitoring = monitoringResult.rows[0];
+    const totalChecks = parseInt(monitoring.total_checks);
+    const upCount = parseInt(monitoring.up_count);
+    const downCount = parseInt(monitoring.down_count);
+    const timeoutCount = parseInt(monitoring.timeout_count);
+    const errorCount = parseInt(monitoring.error_count);
+
+    const uptimePercentage = totalChecks > 0 ? Math.round((upCount / totalChecks) * 100) : 0;
+
+    return {
+      totalServers,
+      totalAgents,
+      totalChecks,
+      upCount,
+      downCount,
+      timeoutCount,
+      errorCount,
+      uptimePercentage
+    };
   } finally {
     client.release();
   }

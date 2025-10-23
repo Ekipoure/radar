@@ -47,6 +47,7 @@
   "devDependencies": {
     "eslint": "^8",
     "eslint-config-next": "14.0.4",
+    "ignore-loader": "^0.1.2",
     "tsx": "^4.6.2"
   }
 }

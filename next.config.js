@@ -12,11 +12,38 @@ const nextConfig = {
       });
     }
     
-    // Ignore SSH2 native binaries in client-side builds
+    // Ignore problematic modules in client-side builds
     config.resolve.fallback = {
       ...config.resolve.fallback,
       'ssh2': false,
+      'bcrypt': false,
+      'aws-sdk': false,
+      'mock-aws-s3': false,
+      'nock': false,
+      'fs': false,
+      'path': false,
+      'os': false,
+      'crypto': false,
+      'stream': false,
+      'util': false,
+      'url': false,
+      'querystring': false,
+      'http': false,
+      'https': false,
+      'zlib': false,
+      'net': false,
+      'tls': false,
+      'child_process': false,
+      'dns': false,
+      'pg': false,
+      'pg-native': false,
     };
+
+    // Ignore problematic files
+    config.module.rules.push({
+      test: /\.html$/,
+      use: 'ignore-loader'
+    });
 
     return config;
   },

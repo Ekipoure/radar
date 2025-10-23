@@ -26,6 +26,7 @@ export interface Server {
 export interface MonitoringData {
   id: number;
   server_id: number;
+  source_ip?: string;
   status: 'up' | 'down' | 'timeout' | 'error' | 'skipped';
   response_time?: number;
   error_message?: string;
@@ -39,12 +40,30 @@ export interface ServerWithStatus extends Server {
   error_message?: string;
 }
 
+export interface Agent {
+  id: number;
+  name: string;
+  server_ip: string;
+  username: string;
+  repo_url: string;
+  status: 'deployed' | 'deploying' | 'failed' | 'stopped';
+  deployed_at: string;
+  last_checked?: string;
+  port: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DashboardStats {
-  total_servers: number;
-  up_servers: number;
-  down_servers: number;
-  iranian_servers: number;
-  global_servers: number;
+  totalServers: number;
+  totalAgents: number;
+  totalChecks: number;
+  upCount: number;
+  downCount: number;
+  timeoutCount: number;
+  errorCount: number;
+  uptimePercentage: number;
 }
 
 export interface CreateServerData {
