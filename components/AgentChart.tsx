@@ -251,11 +251,11 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
               {agent.server_ip}
             </span>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              agent.status === 'deployed' 
+              agent.current_status === 'active' 
                 ? 'bg-green-100 text-green-800' 
                 : 'bg-red-100 text-red-800'
             }`}>
-              {agent.status === 'deployed' ? 'فعال' : 'غیرفعال'}
+              {agent.current_status === 'active' ? 'فعال' : 'غیرفعال'}
             </span>
             <span className="text-xs">
               پورت: {agent.port}

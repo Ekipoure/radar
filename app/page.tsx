@@ -2,20 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import ServerChart from '@/components/ServerChart';
-import ServerInfoCard from '@/components/ServerInfoCard';
 import AgentChart from '@/components/AgentChart';
 import GlobalFilters from '@/components/GlobalFilters';
-import { ServerWithStatus, Agent } from '@/lib/types';
+import { Agent } from '@/lib/types';
 
 export default function Home() {
-  const [servers, setServers] = useState<ServerWithStatus[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'iranian' | 'global'>('all');
   const [viewMode, setViewMode] = useState<'charts' | 'cards'>('charts');
   const [chartDisplayMode, setChartDisplayMode] = useState<'single' | 'dual'>('dual');
-  const [chartType, setChartType] = useState<'servers' | 'agents'>('agents');
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -64,21 +59,8 @@ export default function Home() {
           setLoading(true);
         }
         
-        const [serversResponse, agentsResponse] = await Promise.all([
-          fetch('/api/public/servers'),
-          fetch('/api/agents/monitoring')
-        ]);
+        const agentsResponse = await fetch('/api/agents/monitoring');
         
-        console.log('Servers API response status:', serversResponse.status);
-        if (serversResponse.ok) {
-          const data = await serversResponse.json();
-          console.log('Servers data received:', data);
-          setServers(data.servers);
-        } else {
-          const errorText = await serversResponse.text();
-          console.error('Servers API error:', serversResponse.status, errorText);
-        }
-
         console.log('Agents API response status:', agentsResponse.status);
         if (agentsResponse.ok) {
           const data = await agentsResponse.json();
@@ -119,18 +101,10 @@ export default function Home() {
 
   // Force refresh when data changes
   useEffect(() => {
-    if (!isInitialLoad && (servers.length > 0 || agents.length > 0)) {
+    if (!isInitialLoad && agents.length > 0) {
       const fetchData = async () => {
         try {
-          const [serversResponse, agentsResponse] = await Promise.all([
-            fetch('/api/public/servers'),
-            fetch('/api/agents/monitoring')
-          ]);
-          
-          if (serversResponse.ok) {
-            const data = await serversResponse.json();
-            setServers(data.servers);
-          }
+          const agentsResponse = await fetch('/api/agents/monitoring');
           
           if (agentsResponse.ok) {
             const data = await agentsResponse.json();
@@ -145,45 +119,21 @@ export default function Home() {
       
       fetchData();
     }
-  }, [servers.map(s => `${s.id}-${s.current_status}-${s.response_time}-${s.last_checked}`).join(',')]);
+  }, [agents.map(a => `${a.id}-${a.current_status}`).join(',')]);
 
-  const filteredServers = servers.filter(server => {
-    if (filter === 'all') return true;
-    return server.server_group === filter;
-  });
-
-  const filteredAgents = agents.filter(agent => {
-    if (filter === 'all') return true;
-    // For agents, we'll show all since they don't have server_group
-    return true;
-  });
+  const filteredAgents = agents;
 
   const getStats = () => {
-    if (chartType === 'agents') {
-      const activeAgents = agents.filter(a => a.status === 'deployed');
-      const inactiveAgents = agents.filter(a => a.status !== 'deployed');
-      
-      return {
-        total: agents.length,
-        active: activeAgents.length,
-        inactive: inactiveAgents.length,
-        iranian: 0, // Agents don't have server_group
-        global: agents.length
-      };
-    } else {
-      const iranian = servers.filter(s => s.server_group === 'iranian');
-      const global = servers.filter(s => s.server_group === 'global');
-      const up = servers.filter(s => s.current_status === 'up');
-      const down = servers.filter(s => s.current_status && s.current_status !== 'up');
-
-      return {
-        total: servers.length,
-        active: up.length,
-        inactive: down.length,
-        iranian: iranian.length,
-        global: global.length
-      };
-    }
+    const activeAgents = agents.filter(a => a.status === 'deployed');
+    const inactiveAgents = agents.filter(a => a.status !== 'deployed');
+    
+    return {
+      total: agents.length,
+      active: activeAgents.length,
+      inactive: inactiveAgents.length,
+      iranian: 0, // Agents don't have server_group
+      global: agents.length
+    };
   };
 
   const stats = getStats();
@@ -247,19 +197,19 @@ export default function Home() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6 text-center transition-all duration-300 ease-in-out">
             <div className="text-3xl font-bold text-gray-900 transition-all duration-500 ease-in-out">{stats.total}</div>
-            <div className="text-sm text-gray-600">{chartType === 'agents' ? 'کل ایجنت‌ها' : 'کل سرورها'}</div>
+            <div className="text-sm text-gray-600">کل ایجنت‌ها</div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 text-center transition-all duration-300 ease-in-out">
             <div className="text-3xl font-bold text-green-600 transition-all duration-500 ease-in-out">{stats.active}</div>
-            <div className="text-sm text-gray-600">{chartType === 'agents' ? 'فعال' : 'آنلاین'}</div>
+            <div className="text-sm text-gray-600">فعال</div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 text-center transition-all duration-300 ease-in-out">
             <div className="text-3xl font-bold text-red-600 transition-all duration-500 ease-in-out">{stats.inactive}</div>
-            <div className="text-sm text-gray-600">{chartType === 'agents' ? 'غیرفعال' : 'آفلاین'}</div>
+            <div className="text-sm text-gray-600">غیرفعال</div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 text-center transition-all duration-300 ease-in-out">
             <div className="text-3xl font-bold text-blue-600 transition-all duration-500 ease-in-out">{stats.iranian}</div>
-            <div className="text-sm text-gray-600">{chartType === 'agents' ? 'کل ایجنت‌ها' : 'داخلی'}</div>
+            <div className="text-sm text-gray-600">کل ایجنت‌ها</div>
           </div>
         </div>
 
@@ -269,59 +219,15 @@ export default function Home() {
             <button
               onClick={() => setChartType('agents')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                chartType === 'agents'
+                true
                   ? 'bg-purple-500 text-white'
                   : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
             >
               چارت‌های ایجنت
             </button>
-            <button
-              onClick={() => setChartType('servers')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                chartType === 'servers'
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              چارت‌های سرور
-            </button>
           </div>
           
-          {chartType === 'servers' && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === 'all'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                همه سرورها
-              </button>
-              <button
-                onClick={() => setFilter('iranian')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === 'iranian'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                سرورهای داخلی
-              </button>
-              <button
-                onClick={() => setFilter('global')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === 'global'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                سرورهای خارجی
-              </button>
-            </div>
-          )}
           
           <div className="flex gap-2 mr-auto">
             <button
@@ -379,7 +285,7 @@ export default function Home() {
           onTimeRangeChange={setGlobalTimeRange}
           selectedServers={globalSelectedServers}
           onSelectedServersChange={setGlobalSelectedServers}
-          showServerFilter={chartType === 'agents'}
+          showServerFilter={true}
         />
 
         {/* Data Display */}
@@ -387,7 +293,7 @@ export default function Home() {
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
           </div>
-        ) : chartType === 'agents' ? (
+        ) : (
           filteredAgents.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-gray-500 text-lg">هیچ ایجنت فعالی یافت نشد</div>
@@ -411,34 +317,10 @@ export default function Home() {
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{agent.name}</h3>
                     <div className="text-sm text-gray-600">
                       <div>IP: {agent.server_ip}</div>
-                      <div>وضعیت: {agent.status === 'deployed' ? 'فعال' : 'غیرفعال'}</div>
+                      <div>وضعیت: {agent.current_status === 'active' ? 'فعال' : 'غیرفعال'}</div>
                       <div>پورت: {agent.port}</div>
                     </div>
                   </div>
-                )
-              ))}
-            </div>
-          )
-        ) : (
-          filteredServers.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-500 text-lg">هیچ سروری یافت نشد</div>
-            </div>
-          ) : (
-            <div className={`grid gap-6 ${
-              viewMode === 'charts' 
-                ? (chartDisplayMode === 'single' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2')
-                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-            }`}>
-              {filteredServers.map((server) => (
-                viewMode === 'charts' ? (
-                  <ServerChart 
-                    key={server.id} 
-                    server={server} 
-                    timeRange={globalTimeRange}
-                  />
-                ) : (
-                  <ServerInfoCard key={server.id} server={server} />
                 )
               ))}
             </div>

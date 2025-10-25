@@ -160,7 +160,54 @@ export async function getAgentsWithMonitoringData(hours: number = 24): Promise<a
       GROUP BY a.id, a.name, a.server_ip, a.status, a.deployed_at, a.last_checked
       ORDER BY a.name
     `);
-    return result.rows;
+    
+    // Calculate actual status based on recent monitoring data
+    const agents = [];
+    for (const agent of result.rows) {
+      // Get recent monitoring data for this agent (last 5 checks in past hour)
+      const recentResult = await client.query(`
+        SELECT status, checked_at
+        FROM monitoring_data
+        WHERE source_ip = $1
+          AND checked_at > NOW() - INTERVAL '1 hour'
+        ORDER BY checked_at DESC
+        LIMIT 5
+      `, [agent.server_ip]);
+      
+      const recentData = recentResult.rows;
+      
+      // Calculate status based on recent data
+      let currentStatus = 'unknown';
+      if (recentData.length > 0) {
+        const successCount = recentData.filter(r => r.status === 'up').length;
+        const failedCount = recentData.filter(r => 
+          ['down', 'timeout', 'error', 'skipped'].includes(r.status)
+        ).length;
+        
+        if (failedCount === recentData.length && recentData.length > 0) {
+          currentStatus = 'inactive';
+        } else if (successCount > 0) {
+          currentStatus = 'active';
+        } else {
+          currentStatus = 'unknown';
+        }
+      } else {
+        // If no recent data, use the agent's deployment status
+        currentStatus = agent.agent_status === 'deployed' ? 'active' : 'inactive';
+      }
+      
+      agents.push({
+        ...agent,
+        current_status: currentStatus,
+        success_count: recentData.filter(r => r.status === 'up').length,
+        failed_count: recentData.filter(r => 
+          ['down', 'timeout', 'error', 'skipped'].includes(r.status)
+        ).length,
+        total_recent_checks: recentData.length
+      });
+    }
+    
+    return agents;
   } finally {
     client.release();
   }
