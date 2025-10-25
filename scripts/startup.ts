@@ -12,15 +12,10 @@ async function startup() {
     console.log('🔄 Starting monitoring service...');
     monitoringService.start();
     
-    // Verify the service is running
+    // Monitoring service is now disabled - no server requests
     const status = monitoringService.getStatus();
-    if (status.isRunning) {
-      console.log('✅ Monitoring service started successfully');
-      console.log('📡 Service will check servers every 10 seconds (respecting individual intervals)');
-    } else {
-      console.error('❌ Failed to start monitoring service');
-      process.exit(1);
-    }
+    console.log('✅ Monitoring service initialized (DISABLED - No server requests)');
+    console.log('📊 System will only use existing database data');
     
     console.log('🎉 Startup completed successfully');
     

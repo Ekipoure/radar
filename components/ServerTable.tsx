@@ -21,6 +21,10 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted 
     switch (status) {
       case 'up':
         return <span className="status-badge status-up">Online</span>;
+      case 'active':
+        return <span className="status-badge status-up">Active</span>;
+      case 'inactive':
+        return <span className="status-badge status-down">Inactive</span>;
       case 'down':
         return <span className="status-badge status-down">Offline</span>;
       case 'timeout':

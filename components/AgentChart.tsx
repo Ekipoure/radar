@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { MonitoringData } from '@/lib/types';
 
 interface AgentChartProps {
@@ -53,7 +53,7 @@ const statusLabels = {
   skipped: 'رد شده'
 };
 
-export default function AgentChart({ agent, className = '', timeRange = 6, selectedServers = [] }: AgentChartProps) {
+function AgentChart({ agent, className = '', timeRange = 6, selectedServers = [] }: AgentChartProps) {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [allChartData, setAllChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +62,7 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<ChartData | null>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   // Update current time every minute
   useEffect(() => {
@@ -73,20 +74,27 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
     return () => clearInterval(timer);
   }, []);
 
-  // Apply server filter to chart data
-  const applyServerFilter = (data: ChartData[]) => {
+  // Apply server filter to chart data - memoized for performance
+  const applyServerFilter = useCallback((data: ChartData[]) => {
     if (selectedServers.length === 0) {
       setChartData([]);
       return;
     }
     
+    // Filter by selected servers and show ALL disruptions (not just 'down' status)
     const filteredData = data.filter(item => 
-      item.serverId && selectedServers.includes(item.serverId)
+      item.serverId && selectedServers.includes(item.serverId) && item.status !== 'up'
     );
     setChartData(filteredData);
-  };
+  }, [selectedServers]);
 
-  const fetchChartData = async (isRefresh = false) => {
+  const fetchChartData = useCallback(async (isRefresh = false) => {
+    // Throttle API calls - don't fetch more than once every 5 seconds for refreshes
+    const now = Date.now();
+    if (isRefresh && now - lastFetchTime < 5000) {
+      return;
+    }
+    
     try {
       if (!isRefresh) {
         setLoading(true);
@@ -115,20 +123,27 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
               month: '2-digit'
             }),
             status: item.status,
-            responseTime: item.response_time,
+            responseTime: item.response_time ? parseFloat(item.response_time) : null,
             serverName: item.server_name,
             serverColor: item.server_color,
             errorMessage: item.error_message,
             serverId: item.server_id // Add server ID for filtering
           }))
-          .sort((a: ChartData, b: ChartData) => new Date(a.time).getTime() - new Date(b.time).getTime())
-          .slice(0, 100); // Limit to maximum 100 candles
+          .sort((a: ChartData, b: ChartData) => new Date(a.time).getTime() - new Date(b.time).getTime());
         
         console.log(`Processed chart data:`, allData);
-        setAllChartData(allData);
         
-        // Apply server filter
-        applyServerFilter(allData);
+        // Only update if data has actually changed to prevent jumping
+        const dataChanged = JSON.stringify(allData) !== JSON.stringify(allChartData);
+        if (dataChanged) {
+          setAllChartData(allData);
+          setLastFetchTime(now);
+          
+          // Apply server filter
+          applyServerFilter(allData);
+        } else {
+          console.log('Data unchanged, skipping update to prevent jumping');
+        }
       } else {
         const errorText = await response.text();
         console.error(`API error: ${response.status} - ${errorText}`);
@@ -143,19 +158,19 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
         setIsRefreshing(false);
       }
     }
-  };
+  }, [agent.name, agent.server_ip, timeRange, applyServerFilter, lastFetchTime]);
 
   useEffect(() => {
     // Initial load
     fetchChartData();
     
-    // Auto-refresh every 30 seconds (silent)
+    // Auto-refresh every 30 seconds (balanced frequency)
     const interval = setInterval(() => {
       fetchChartData(true);
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [agent.server_ip, timeRange]);
+  }, [fetchChartData]);
 
   // Apply filter when selected servers change
   useEffect(() => {
@@ -165,64 +180,64 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
   }, [selectedServers, allChartData]);
 
 
-  const getStatusCounts = () => {
-    const counts = chartData.reduce((acc, item) => {
+  // Memoized computed values for better performance
+  const statusCounts = useMemo(() => {
+    // Use allChartData for status counts to show all statuses in legend
+    return allChartData.reduce((acc, item) => {
       acc[item.status] = (acc[item.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    return counts;
-  };
+  }, [allChartData]);
 
-  const getUptimePercentage = () => {
+  const uptime = useMemo(() => {
     if (allChartData.length === 0) return 0;
     const upCount = allChartData.filter(item => item.status === 'up').length;
     return Math.round((upCount / allChartData.length) * 100);
-  };
+  }, [allChartData]);
 
-  const getDisruptionCount = () => {
+  const disruptionCount = useMemo(() => {
     return allChartData.filter(item => item.status !== 'up').length;
-  };
+  }, [allChartData]);
 
-  const getAverageResponseTime = () => {
+  const avgResponseTime = useMemo(() => {
     const responseTimes = allChartData
-      .filter(item => item.responseTime && item.status === 'up')
+      .filter(item => item.responseTime !== null && item.responseTime !== undefined && item.responseTime > 0 && item.status === 'up')
       .map(item => item.responseTime!);
     
     if (responseTimes.length === 0) return 0;
-    return Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length);
-  };
+    const average = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
+    return Math.round(average);
+  }, [allChartData]);
 
-  const getMaxResponseTime = () => {
+  const maxResponseTime = useMemo(() => {
     if (chartData.length === 0) return 100;
-    return Math.max(...chartData.map(d => d.responseTime || 0), 100);
-  };
+    const validResponseTimes = chartData
+      .filter(d => d.responseTime !== null && d.responseTime !== undefined && d.responseTime > 0)
+      .map(d => d.responseTime!);
+    return validResponseTimes.length > 0 ? Math.max(...validResponseTimes, 100) : 100;
+  }, [chartData]);
 
-  const getBarHeight = (responseTime: number) => {
+  const getBarHeight = useCallback((responseTime: number | null | undefined) => {
     const maxHeight = 60; // Maximum height in pixels
     const minHeight = 4;  // Minimum height in pixels
-    const maxResponseTime = getMaxResponseTime();
     
-    if (responseTime <= 0) return minHeight;
+    if (!responseTime || responseTime <= 0) return minHeight;
     
     // Use square root scaling for better visual distribution
     const normalizedTime = Math.sqrt(responseTime) / Math.sqrt(maxResponseTime);
     const height = minHeight + (normalizedTime * (maxHeight - minHeight));
     
     return Math.max(minHeight, Math.min(maxHeight, height));
-  };
+  }, [maxResponseTime]);
 
-  const statusCounts = getStatusCounts();
-  const uptime = getUptimePercentage();
-  const avgResponseTime = getAverageResponseTime();
-
-  const handleMouseEnter = (item: ChartData, event: React.MouseEvent) => {
+  const handleMouseEnter = useCallback((item: ChartData, event: React.MouseEvent) => {
     setHoveredItem(item);
     setHoverPosition({ x: event.clientX, y: event.clientY });
-  };
+  }, []);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     setHoveredItem(null);
-  };
+  }, []);
 
   return (
     <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`} dir="rtl">
@@ -252,7 +267,7 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
 
 
       {/* Stats Cards - Show All Data */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-gray-50 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-gray-900">{uptime}%</div>
           <div className="text-xs text-gray-600">آپتایم کل</div>
@@ -262,27 +277,9 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
           <div className="text-xs text-gray-600">میانگین پاسخ</div>
         </div>
         <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-red-600">{getDisruptionCount()}</div>
+          <div className="text-2xl font-bold text-red-600">{disruptionCount}</div>
           <div className="text-xs text-gray-600">تعداد اختلالات</div>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-blue-600">{allChartData.length}</div>
-          <div className="text-xs text-gray-600">کل بررسی‌ها</div>
-        </div>
-      </div>
-
-      {/* Last Check Info */}
-      <div className="bg-gray-50 rounded-lg p-3 text-center mb-6">
-        <div className="text-sm font-medium text-gray-900">
-          {agent.last_checked ? 
-            new Date(agent.last_checked).toLocaleString('fa-IR', {
-              timeZone: 'Asia/Tehran',
-              hour: '2-digit',
-              minute: '2-digit'
-            }) : 'نامشخص'
-          }
-        </div>
-        <div className="text-xs text-gray-600">آخرین چک</div>
       </div>
 
       {/* Chart */}
@@ -291,15 +288,17 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
           <div className="flex items-center justify-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
+        ) : selectedServers.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-gray-500">
+            <div className="text-center">
+              <div className="text-lg mb-2">⚠️ هیچ سروری انتخاب نشده</div>
+              <div className="text-sm">لطفاً حداقل یک سرور مقصد را انتخاب کنید</div>
+            </div>
+          </div>
         ) : chartData.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-gray-500">
             <div className="text-center">
-              {selectedServers.length === 0 ? (
-                <>
-                  <div className="text-lg mb-2">⚠️ هیچ سروری انتخاب نشده</div>
-                  <div className="text-sm">لطفاً حداقل یک سرور مقصد را انتخاب کنید</div>
-                </>
-              ) : allChartData.length === 0 ? (
+              {allChartData.length === 0 ? (
                 <>
                   <div className="text-lg mb-2">✅ هیچ اختلالی یافت نشد</div>
                   <div className="text-sm">تمام سرورهای مقصد در وضعیت عادی هستند</div>
@@ -314,7 +313,7 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
           </div>
         ) : (
           <div className="space-y-2 transition-all duration-300 ease-in-out">
-            {/* Chart Bars - Only show disruptions */}
+            {/* Chart Bars - Show all disruptions (not just 'down' status) with server color */}
             <div className="flex items-end gap-1 h-20">
               {chartData.map((item, index) => (
                 <div
@@ -322,7 +321,7 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
                   className="flex-1 rounded-t transition-all duration-500 ease-in-out cursor-pointer hover:opacity-100"
                   style={{
                     height: `${getBarHeight(item.responseTime || 0)}px`,
-                    backgroundColor: item.serverColor, // Use server color for all disruptions
+                    backgroundColor: item.serverColor, // Use destination server color for disruptions
                     opacity: 0.8
                   }}
                   title={`${item.time} - ${item.serverName} - ${statusLabels[item.status]} - ${item.responseTime || 0}ms`}
@@ -341,7 +340,7 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
         )}
       </div>
 
-      {/* Disruption Legend - Only show non-up statuses */}
+      {/* Status Legend - Show all disruption types */}
       <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-gray-200">
         {Object.entries(statusLabels)
           .filter(([status]) => status !== 'up')
@@ -355,6 +354,7 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
               <span className="text-sm font-medium text-gray-900">
                 ({statusCounts[status] || 0})
               </span>
+              <span className="text-xs text-blue-600 font-medium">(کندل)</span>
             </div>
           ))}
         {chartData.length === 0 && (
@@ -387,6 +387,7 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
                 hoveredItem.status === 'down' ? 'bg-red-600' :
                 hoveredItem.status === 'timeout' ? 'bg-yellow-600' :
                 hoveredItem.status === 'error' ? 'bg-purple-600' :
+                hoveredItem.status === 'skipped' ? 'bg-gray-600' :
                 'bg-gray-600'
               }`}>
                 {statusLabels[hoveredItem.status]}
@@ -420,3 +421,6 @@ export default function AgentChart({ agent, className = '', timeRange = 6, selec
     </div>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(AgentChart);

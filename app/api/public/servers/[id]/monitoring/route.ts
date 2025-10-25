@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMonitoringHistory } from '@/lib/monitoring';
+import { getCachedData, generateCacheKey } from '@/lib/cache';
 import pool from '@/lib/database';
 
 export async function GET(
@@ -29,7 +30,7 @@ export async function GET(
       client.release();
     }
 
-    // Get monitoring data
+    // Get monitoring data (cache disabled temporarily)
     const monitoringData = await getMonitoringHistory(serverId, hours);
 
     return NextResponse.json(monitoringData);

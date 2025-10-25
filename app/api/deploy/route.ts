@@ -158,6 +158,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if server already has an active agent
+    try {
+      const client = await pool.connect();
+      
+      try {
+        const existingAgentResult = await client.query(`
+          SELECT id, name, status, is_active 
+          FROM agents 
+          WHERE server_ip = $1 AND is_active = true
+        `, [config.serverIp]);
+
+        if (existingAgentResult.rows.length > 0) {
+          const existingAgent = existingAgentResult.rows[0];
+          return NextResponse.json(
+            { 
+              success: false, 
+              message: `Server ${config.serverIp} already has an active agent: "${existingAgent.name}" (Status: ${existingAgent.status})`,
+              logs: [`[ERROR] Server ${config.serverIp} already has an active agent: "${existingAgent.name}"`]
+            },
+            { status: 409 }
+          );
+        }
+      } finally {
+        client.release();
+      }
+    } catch (dbError) {
+      console.error('Error checking existing agents:', dbError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Failed to check existing agents on server',
+          logs: ['[ERROR] Failed to check existing agents on server']
+        },
+        { status: 500 }
+      );
+    }
+
     // Create and run deployment agent
     const deployAgent = new DeployAgent(config);
     const result = await deployAgent.deploy();

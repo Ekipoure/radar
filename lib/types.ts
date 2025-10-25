@@ -34,7 +34,7 @@ export interface MonitoringData {
 }
 
 export interface ServerWithStatus extends Server {
-  current_status?: 'up' | 'down' | 'timeout' | 'error' | 'skipped';
+  current_status?: 'up' | 'down' | 'timeout' | 'error' | 'skipped' | 'active' | 'inactive' | 'unknown';
   last_checked?: string;
   response_time?: number;
   error_message?: string;

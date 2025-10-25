@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Monitoring service initialized successfully',
-      status 
+      message: 'Monitoring service initialized (DISABLED - No server requests)',
+      status: { ...status, isRunning: false, disabled: true }
     });
   } catch (error) {
     console.error('❌ Failed to initialize monitoring service:', error);

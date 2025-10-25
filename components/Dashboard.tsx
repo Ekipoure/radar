@@ -63,11 +63,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     fetchData();
   }, [refreshKey]);
 
-  // Auto-refresh data every 15 seconds to show updated monitoring data
+  // Auto-refresh data every 30 seconds to show updated monitoring data (reduced frequency for better performance)
   useEffect(() => {
     const interval = setInterval(() => {
       fetchData();
-    }, 15000); // Refresh every 15 seconds
+    }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
   }, []);

@@ -380,6 +380,49 @@ except Exception as e:
         this.log('ℹ️ Skipping .env file upload (no content provided)');
       }
 
+      // Detect operating system and install essential system dependencies
+      this.log('Detecting operating system and installing essential dependencies...');
+      try {
+        // Try to detect the OS
+        let osDetected = 'unknown';
+        try {
+          const osRelease = await this.executeSSHCommand(conn, `cat /etc/os-release | grep "^ID=" | cut -d'=' -f2 | tr -d '"'`);
+          osDetected = osRelease.trim().toLowerCase();
+          this.log(`Detected OS: ${osDetected}`);
+        } catch (osError) {
+          this.log('Could not detect OS, assuming Ubuntu/Debian');
+          osDetected = 'ubuntu';
+        }
+
+        // Install dependencies based on OS
+        if (osDetected === 'ubuntu' || osDetected === 'debian') {
+          await this.executeSSHCommand(conn, `
+            sudo apt-get update &&
+            sudo apt-get install -y curl wget git build-essential software-properties-common apt-transport-https ca-certificates gnupg lsb-release
+          `);
+        } else if (osDetected === 'centos' || osDetected === 'rhel' || osDetected === 'fedora') {
+          await this.executeSSHCommand(conn, `
+            sudo yum update -y &&
+            sudo yum install -y curl wget git gcc gcc-c++ make which
+          `);
+        } else if (osDetected === 'alpine') {
+          await this.executeSSHCommand(conn, `
+            sudo apk update &&
+            sudo apk add curl wget git build-base
+          `);
+        } else {
+          // Fallback to apt-get
+          await this.executeSSHCommand(conn, `
+            sudo apt-get update &&
+            sudo apt-get install -y curl wget git build-essential software-properties-common apt-transport-https ca-certificates gnupg lsb-release
+          `);
+        }
+        this.log('✓ Essential system dependencies installed');
+      } catch (sysDepError) {
+        this.log(`Warning: Could not install all system dependencies: ${sysDepError instanceof Error ? sysDepError.message : 'Unknown error'}`);
+        this.log('Continuing with deployment...');
+      }
+
       // Install Node.js and npm if not available
       this.log('Checking for Node.js and npm...');
       try {
@@ -395,7 +438,7 @@ except Exception as e:
         try {
           this.log('Trying NodeSource installation...');
           await this.executeSSHCommand(conn, `
-            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - &&
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - &&
             sudo apt-get install -y nodejs
           `);
           await this.executeSSHCommand(conn, `node --version && npm --version`);
@@ -439,8 +482,9 @@ except Exception as e:
               curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash &&
               export NVM_DIR="$HOME/.nvm" &&
               [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" &&
-              nvm install 18 &&
-              nvm use 18
+              nvm install 20 &&
+              nvm use 20 &&
+              nvm alias default 20
             `);
             await this.executeSSHCommand(conn, `
               export NVM_DIR="$HOME/.nvm" &&
@@ -454,15 +498,120 @@ except Exception as e:
           }
         }
         
+        // Method 5: Try using binary installation
+        if (!nodeInstalled) {
+          try {
+            this.log('Trying binary installation...');
+            await this.executeSSHCommand(conn, `
+              cd /tmp &&
+              wget https://nodejs.org/dist/v20.10.0/node-v20.10.0-linux-x64.tar.xz &&
+              tar -xf node-v20.10.0-linux-x64.tar.xz &&
+              sudo mv node-v20.10.0-linux-x64 /opt/nodejs &&
+              sudo ln -s /opt/nodejs/bin/node /usr/local/bin/node &&
+              sudo ln -s /opt/nodejs/bin/npm /usr/local/bin/npm &&
+              sudo ln -s /opt/nodejs/bin/npx /usr/local/bin/npx
+            `);
+            await this.executeSSHCommand(conn, `node --version && npm --version`);
+            this.log('✓ Node.js and npm installed via binary');
+            nodeInstalled = true;
+          } catch (binaryError) {
+            this.log(`Binary installation failed: ${binaryError instanceof Error ? binaryError.message : 'Unknown error'}`);
+          }
+        }
+        
         if (!nodeInstalled) {
           throw new Error('Failed to install Node.js and npm. Please install them manually on the server.');
         }
       }
 
+      // Check if PostgreSQL is needed
+      this.log('Checking if PostgreSQL is needed...');
+      try {
+        const packageJsonContent = await this.executeSSHCommand(conn, `cat ${this.config.targetPath}/package.json`);
+        const needsPostgres = packageJsonContent.includes('pg') || 
+                            packageJsonContent.includes('postgres') || 
+                            packageJsonContent.includes('sequelize') ||
+                            packageJsonContent.includes('typeorm') ||
+                            packageJsonContent.includes('prisma');
+        
+        if (needsPostgres) {
+          this.log('PostgreSQL dependencies detected, installing PostgreSQL...');
+          try {
+            // Install PostgreSQL based on OS
+            if (osDetected === 'ubuntu' || osDetected === 'debian') {
+              await this.executeSSHCommand(conn, `
+                sudo apt-get update &&
+                sudo apt-get install -y postgresql postgresql-contrib
+              `);
+            } else if (osDetected === 'centos' || osDetected === 'rhel' || osDetected === 'fedora') {
+              await this.executeSSHCommand(conn, `
+                sudo yum install -y postgresql-server postgresql-contrib
+              `);
+            } else if (osDetected === 'alpine') {
+              await this.executeSSHCommand(conn, `
+                sudo apk add postgresql postgresql-contrib
+              `);
+            } else {
+              // Fallback to apt-get
+              await this.executeSSHCommand(conn, `
+                sudo apt-get update &&
+                sudo apt-get install -y postgresql postgresql-contrib
+              `);
+            }
+            
+            // Start PostgreSQL service
+            await this.executeSSHCommand(conn, `sudo systemctl start postgresql`);
+            await this.executeSSHCommand(conn, `sudo systemctl enable postgresql`);
+            
+            // Create a basic database and user
+            await this.executeSSHCommand(conn, `
+              sudo -u postgres psql -c "CREATE DATABASE project_db;" || true
+            `);
+            await this.executeSSHCommand(conn, `
+              sudo -u postgres psql -c "CREATE USER project_user WITH PASSWORD 'project_password';" || true
+            `);
+            await this.executeSSHCommand(conn, `
+              sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE project_db TO project_user;" || true
+            `);
+            
+            this.log('✓ PostgreSQL installed and configured');
+          } catch (postgresError) {
+            this.log(`Warning: PostgreSQL installation failed: ${postgresError instanceof Error ? postgresError.message : 'Unknown error'}`);
+            this.log('Continuing without PostgreSQL...');
+          }
+        } else {
+          this.log('No PostgreSQL dependencies detected, skipping PostgreSQL installation');
+        }
+      } catch (checkError) {
+        this.log(`Warning: Could not check package.json: ${checkError instanceof Error ? checkError.message : 'Unknown error'}`);
+      }
+
       // Install dependencies
-      this.log('Installing dependencies...');
-      await this.executeSSHCommand(conn, `cd ${this.config.targetPath} && npm install`);
-      this.log('✓ Dependencies installed');
+      this.log('Installing project dependencies...');
+      try {
+        await this.executeSSHCommand(conn, `cd ${this.config.targetPath} && npm install`);
+        this.log('✓ Dependencies installed');
+      } catch (npmError) {
+        this.log(`npm install failed: ${npmError instanceof Error ? npmError.message : 'Unknown error'}`);
+        this.log('Trying with different approaches...');
+        
+        // Try with --force flag
+        try {
+          await this.executeSSHCommand(conn, `cd ${this.config.targetPath} && npm install --force`);
+          this.log('✓ Dependencies installed with --force flag');
+        } catch (forceError) {
+          this.log(`npm install --force failed: ${forceError instanceof Error ? forceError.message : 'Unknown error'}`);
+          
+          // Try with --legacy-peer-deps
+          try {
+            await this.executeSSHCommand(conn, `cd ${this.config.targetPath} && npm install --legacy-peer-deps`);
+            this.log('✓ Dependencies installed with --legacy-peer-deps flag');
+          } catch (legacyError) {
+            this.log(`npm install --legacy-peer-deps failed: ${legacyError instanceof Error ? legacyError.message : 'Unknown error'}`);
+            throw new Error('Failed to install dependencies. Please check the project requirements.');
+          }
+        }
+      }
       
       // Fix permissions and symlinks for node_modules binaries
       this.log('Fixing node_modules permissions and symlinks...');
@@ -523,13 +672,68 @@ except Exception as e:
             this.log('✓ PM2 is already installed');
           } catch (error) {
             this.log('PM2 not found, installing...');
+            let pm2Installed = false;
+            
+            // Method 1: Try global npm install
             try {
+              this.log('Trying global npm install...');
               await this.executeSSHCommand(conn, `sudo npm install -g pm2`);
               await this.executeSSHCommand(conn, `pm2 --version`);
-              this.log('✓ PM2 installed successfully');
-            } catch (pm2Error) {
-              this.log(`PM2 installation failed: ${pm2Error instanceof Error ? pm2Error.message : 'Unknown error'}`);
-              this.log('Continuing without PM2...');
+              this.log('✓ PM2 installed successfully via npm');
+              pm2Installed = true;
+            } catch (npmError) {
+              this.log(`npm PM2 installation failed: ${npmError instanceof Error ? npmError.message : 'Unknown error'}`);
+            }
+            
+            // Method 2: Try with yarn if npm fails
+            if (!pm2Installed) {
+              try {
+                this.log('Trying yarn installation...');
+                await this.executeSSHCommand(conn, `sudo npm install -g yarn`);
+                await this.executeSSHCommand(conn, `sudo yarn global add pm2`);
+                await this.executeSSHCommand(conn, `pm2 --version`);
+                this.log('✓ PM2 installed successfully via yarn');
+                pm2Installed = true;
+              } catch (yarnError) {
+                this.log(`yarn PM2 installation failed: ${yarnError instanceof Error ? yarnError.message : 'Unknown error'}`);
+              }
+            }
+            
+            // Method 3: Try with pnpm if yarn fails
+            if (!pm2Installed) {
+              try {
+                this.log('Trying pnpm installation...');
+                await this.executeSSHCommand(conn, `sudo npm install -g pnpm`);
+                await this.executeSSHCommand(conn, `sudo pnpm add -g pm2`);
+                await this.executeSSHCommand(conn, `pm2 --version`);
+                this.log('✓ PM2 installed successfully via pnpm');
+                pm2Installed = true;
+              } catch (pnpmError) {
+                this.log(`pnpm PM2 installation failed: ${pnpmError instanceof Error ? pnpmError.message : 'Unknown error'}`);
+              }
+            }
+            
+            // Method 4: Try direct download and install
+            if (!pm2Installed) {
+              try {
+                this.log('Trying direct installation...');
+                await this.executeSSHCommand(conn, `
+                  cd /tmp &&
+                  wget https://github.com/Unitech/pm2/archive/master.zip &&
+                  unzip master.zip &&
+                  cd pm2-master &&
+                  sudo npm install -g .
+                `);
+                await this.executeSSHCommand(conn, `pm2 --version`);
+                this.log('✓ PM2 installed successfully via direct download');
+                pm2Installed = true;
+              } catch (directError) {
+                this.log(`Direct PM2 installation failed: ${directError instanceof Error ? directError.message : 'Unknown error'}`);
+              }
+            }
+            
+            if (!pm2Installed) {
+              this.log('All PM2 installation methods failed, continuing without PM2...');
               this.config.usePM2 = false;
             }
           }
@@ -545,6 +749,58 @@ except Exception as e:
           }
         }
 
+      // Detect project type and determine startup method
+      this.log('Detecting project type and startup method...');
+      let startupMethod = 'npm start';
+      let projectType = 'unknown';
+      
+      try {
+        const packageJsonContent = await this.executeSSHCommand(conn, `cat ${this.config.targetPath}/package.json`);
+        const packageJson = JSON.parse(packageJsonContent);
+        
+        // Check for common project types
+        if (packageJson.scripts && packageJson.scripts.start) {
+          startupMethod = 'npm start';
+          projectType = 'npm';
+        } else if (packageJson.scripts && packageJson.scripts.dev) {
+          startupMethod = 'npm run dev';
+          projectType = 'npm dev';
+        } else if (packageJson.scripts && packageJson.scripts.serve) {
+          startupMethod = 'npm run serve';
+          projectType = 'npm serve';
+        } else if (packageJson.scripts && packageJson.scripts.production) {
+          startupMethod = 'npm run production';
+          projectType = 'npm production';
+        } else {
+          // Look for main entry point
+          if (packageJson.main) {
+            startupMethod = `node ${packageJson.main}`;
+            projectType = 'node';
+          } else if (packageJson.bin) {
+            startupMethod = `node ${Object.keys(packageJson.bin)[0]}`;
+            projectType = 'node bin';
+          } else {
+            // Look for common entry files
+            const commonFiles = ['index.js', 'app.js', 'server.js', 'main.js', 'start.js'];
+            for (const file of commonFiles) {
+              try {
+                await this.executeSSHCommand(conn, `test -f ${this.config.targetPath}/${file}`);
+                startupMethod = `node ${file}`;
+                projectType = 'node file';
+                break;
+              } catch (e) {
+                // File doesn't exist, continue
+              }
+            }
+          }
+        }
+        
+        this.log(`Detected project type: ${projectType}, startup method: ${startupMethod}`);
+      } catch (detectionError) {
+        this.log(`Warning: Could not detect project type: ${detectionError instanceof Error ? detectionError.message : 'Unknown error'}`);
+        this.log('Using default startup method: npm start');
+      }
+
       // Start the application
       this.log('Starting the application...');
       const targetPath = this.config.targetPath || '/var/www/project';
@@ -554,13 +810,17 @@ except Exception as e:
       
       if (this.config.usePM2) {
         try {
-          // Method 1: Try npm start with PM2
-          this.log('Trying npm start with PM2...');
-          await this.executeSSHCommand(conn, `cd ${targetPath} && pm2 start npm --name "${path.basename(targetPath)}" -- start`);
-          this.log('✓ Application started with PM2 (npm start)');
+          // Method 1: Try detected startup method with PM2
+          this.log(`Trying ${startupMethod} with PM2...`);
+          if (startupMethod.startsWith('npm')) {
+            await this.executeSSHCommand(conn, `cd ${targetPath} && pm2 start npm --name "${path.basename(targetPath)}" -- ${startupMethod.replace('npm ', '')}`);
+          } else {
+            await this.executeSSHCommand(conn, `cd ${targetPath} && pm2 start "${startupMethod}" --name "${path.basename(targetPath)}"`);
+          }
+          this.log(`✓ Application started with PM2 (${startupMethod})`);
           startSuccessful = true;
-        } catch (npmStartError) {
-          this.log(`npm start failed: ${npmStartError instanceof Error ? npmStartError.message : 'Unknown error'}`);
+        } catch (detectedMethodError) {
+          this.log(`${startupMethod} failed: ${detectedMethodError instanceof Error ? detectedMethodError.message : 'Unknown error'}`);
           
           try {
             // Method 2: Try with compiled JavaScript
@@ -594,13 +854,13 @@ except Exception as e:
         }
       } else {
         try {
-          // Method 1: Try npm start in background
-          this.log('Trying npm start in background...');
-          await this.executeSSHCommand(conn, `cd ${targetPath} && nohup npm start > app.log 2>&1 &`);
-          this.log('✓ Application started in background (npm start)');
+          // Method 1: Try detected startup method in background
+          this.log(`Trying ${startupMethod} in background...`);
+          await this.executeSSHCommand(conn, `cd ${targetPath} && nohup ${startupMethod} > app.log 2>&1 &`);
+          this.log(`✓ Application started in background (${startupMethod})`);
           startSuccessful = true;
-        } catch (npmStartError) {
-          this.log(`npm start failed: ${npmStartError instanceof Error ? npmStartError.message : 'Unknown error'}`);
+        } catch (detectedMethodError) {
+          this.log(`${startupMethod} failed: ${detectedMethodError instanceof Error ? detectedMethodError.message : 'Unknown error'}`);
           
           try {
             // Method 2: Try with compiled JavaScript

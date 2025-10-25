@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
 import { DashboardStats } from '@/lib/types';
 import { verifyToken } from '@/lib/auth';
+import { getServersWithAdvancedStatus } from '@/lib/monitoring';
 
 function getAuthToken(request: NextRequest): string | null {
   return request.cookies.get('auth-token')?.value || null;
@@ -31,27 +32,10 @@ export async function GET(request: NextRequest) {
       const iranianServers = groupResult.rows.find(r => r.server_group === 'iranian')?.count || 0;
       const globalServers = groupResult.rows.find(r => r.server_group === 'global')?.count || 0;
 
-      // Get current status counts
-      const statusResult = await client.query(`
-        SELECT 
-          COALESCE(md.status, 'unknown') as status,
-          COUNT(*) as count
-        FROM servers s
-        LEFT JOIN LATERAL (
-          SELECT status
-          FROM monitoring_data
-          WHERE server_id = s.id
-          ORDER BY checked_at DESC
-          LIMIT 1
-        ) md ON true
-        WHERE s.is_active = true
-        GROUP BY md.status
-      `);
-
-      const upServers = statusResult.rows.find(r => r.status === 'up')?.count || 0;
-      const downServers = statusResult.rows
-        .filter(r => ['down', 'timeout', 'error', 'skipped'].includes(r.status))
-        .reduce((sum, r) => sum + parseInt(r.count), 0);
+      // Get current status counts using new advanced logic
+      const servers = await getServersWithAdvancedStatus();
+      const upServers = servers.filter(s => s.current_status === 'active').length;
+      const downServers = servers.filter(s => s.current_status === 'inactive').length;
 
       // Get total agents count
       const agentsResult = await client.query('SELECT COUNT(*) as count FROM agents WHERE is_active = true');

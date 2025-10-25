@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { MonitoringData, ServerWithStatus } from '@/lib/types';
 
 interface ServerChartProps {
@@ -28,15 +28,20 @@ const statusLabels = {
   down: 'آفلاین',
   timeout: 'تایم‌اوت',
   error: 'خطا',
-  skipped: 'رد شده'
+  skipped: 'رد شده',
+  active: 'فعال',
+  inactive: 'غیرفعال',
+  unknown: 'نامشخص'
 };
 
-export default function ServerChart({ server, className = '', timeRange = 6 }: ServerChartProps) {
+function ServerChart({ server, className = '', timeRange = 6 }: ServerChartProps) {
   const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [allChartData, setAllChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   // Update current time every minute
   useEffect(() => {
@@ -49,7 +54,13 @@ export default function ServerChart({ server, className = '', timeRange = 6 }: S
     return () => clearInterval(timer);
   }, []);
 
-  const fetchChartData = async (isRefresh = false) => {
+  const fetchChartData = useCallback(async (isRefresh = false) => {
+    // Throttle API calls - don't fetch more than once every 5 seconds for refreshes
+    const now = Date.now();
+    if (isRefresh && now - lastFetchTime < 5000) {
+      return;
+    }
+    
     try {
       // Only show loading on initial load, not on refreshes
       if (!isRefresh) {
@@ -69,7 +80,7 @@ export default function ServerChart({ server, className = '', timeRange = 6 }: S
         console.log(`Received ${data.length} monitoring records for server ${server.id}:`, data);
         
         // Convert to chart data and sort by time
-        const chartData: ChartData[] = data
+        const allData: ChartData[] = data
           .map((item: any) => ({
             time: new Date(item.checked_at).toLocaleString('fa-IR', {
               timeZone: 'Asia/Tehran',
@@ -81,11 +92,20 @@ export default function ServerChart({ server, className = '', timeRange = 6 }: S
             status: item.status,
             responseTime: item.response_time
           }))
-          .sort((a: ChartData, b: ChartData) => new Date(a.time).getTime() - new Date(b.time).getTime())
-          .slice(0, 100); // Limit to maximum 100 candles
+          .sort((a: ChartData, b: ChartData) => new Date(a.time).getTime() - new Date(b.time).getTime());
         
-        console.log(`Processed chart data:`, chartData);
-        setChartData(chartData);
+        // Filter to only show disruptions (down status) for candles
+        const filteredData = allData.filter(item => item.status === 'down');
+        
+        console.log(`Processed chart data:`, filteredData);
+        
+        // Only update if data has actually changed to prevent jumping
+        const dataChanged = JSON.stringify(allData) !== JSON.stringify(allChartData);
+        if (dataChanged) {
+          setAllChartData(allData);
+          setChartData(filteredData);
+          setLastFetchTime(now);
+        }
       } else {
         const errorText = await response.text();
         console.error(`API error: ${response.status} - ${errorText}`);
@@ -100,53 +120,53 @@ export default function ServerChart({ server, className = '', timeRange = 6 }: S
         setIsRefreshing(false);
       }
     }
-  };
+  }, [server.id, timeRange, lastFetchTime]);
 
   useEffect(() => {
     // Initial load
     fetchChartData();
     
-    // Auto-refresh every 30 seconds (silent)
+    // Auto-refresh every 30 seconds (balanced frequency)
     const interval = setInterval(() => {
       fetchChartData(true);
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [server.id, timeRange]);
+  }, [fetchChartData]);
 
 
-  const getStatusCounts = () => {
-    const counts = chartData.reduce((acc, item) => {
+  // Memoized computed values for better performance
+  const statusCounts = useMemo(() => {
+    // Use allChartData for status counts to show all statuses in legend
+    return allChartData.reduce((acc, item) => {
       acc[item.status] = (acc[item.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    return counts;
-  };
+  }, [allChartData]);
 
-  const getUptimePercentage = () => {
-    if (chartData.length === 0) return 0;
-    const upCount = chartData.filter(item => item.status === 'up').length;
-    return Math.round((upCount / chartData.length) * 100);
-  };
+  const uptime = useMemo(() => {
+    if (allChartData.length === 0) return 0;
+    const upCount = allChartData.filter(item => item.status === 'up').length;
+    return Math.round((upCount / allChartData.length) * 100);
+  }, [allChartData]);
 
-  const getAverageResponseTime = () => {
-    const responseTimes = chartData
+  const avgResponseTime = useMemo(() => {
+    const responseTimes = allChartData
       .filter(item => item.responseTime && item.status === 'up')
       .map(item => item.responseTime!);
     
     if (responseTimes.length === 0) return 0;
     return Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length);
-  };
+  }, [allChartData]);
 
-  const getMaxResponseTime = () => {
+  const maxResponseTime = useMemo(() => {
     if (chartData.length === 0) return 100;
     return Math.max(...chartData.map(d => d.responseTime || 0), 100);
-  };
+  }, [chartData]);
 
-  const getBarHeight = (responseTime: number) => {
+  const getBarHeight = useCallback((responseTime: number) => {
     const maxHeight = 60; // Maximum height in pixels
     const minHeight = 4;  // Minimum height in pixels
-    const maxResponseTime = getMaxResponseTime();
     
     if (responseTime <= 0) return minHeight;
     
@@ -156,11 +176,7 @@ export default function ServerChart({ server, className = '', timeRange = 6 }: S
     const height = minHeight + (normalizedTime * (maxHeight - minHeight));
     
     return Math.max(minHeight, Math.min(maxHeight, height));
-  };
-
-  const statusCounts = getStatusCounts();
-  const uptime = getUptimePercentage();
-  const avgResponseTime = getAverageResponseTime();
+  }, [maxResponseTime]);
 
   return (
     <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`} dir="rtl">
@@ -206,18 +222,6 @@ export default function ServerChart({ server, className = '', timeRange = 6 }: S
           <div className="text-2xl font-bold text-gray-900">{chartData.length}</div>
           <div className="text-xs text-gray-600">تعداد چک</div>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-gray-900" suppressHydrationWarning>
-            {server.last_checked ? 
-              new Date(server.last_checked).toLocaleString('fa-IR', {
-                timeZone: 'Asia/Tehran',
-                hour: '2-digit',
-                minute: '2-digit'
-              }) : 'نامشخص'
-            }
-          </div>
-          <div className="text-xs text-gray-600">آخرین چک</div>
-        </div>
       </div>
 
       {/* Chart */}
@@ -232,7 +236,7 @@ export default function ServerChart({ server, className = '', timeRange = 6 }: S
           </div>
         ) : (
           <div className="space-y-2 transition-all duration-300 ease-in-out">
-            {/* Chart Bars */}
+            {/* Chart Bars - Only show disruptions (down status) with server color */}
             <div className="flex items-end gap-1 h-20">
               {chartData.map((item, index) => (
                 <div
@@ -240,7 +244,7 @@ export default function ServerChart({ server, className = '', timeRange = 6 }: S
                   className="flex-1 rounded-t transition-all duration-500 ease-in-out"
                   style={{
                     height: `${getBarHeight(item.responseTime || 0)}px`,
-                    backgroundColor: statusColors[item.status],
+                    backgroundColor: server.color, // Use server color for disruptions
                     opacity: 0.8
                   }}
                   title={`${item.time} - ${statusLabels[item.status]} - ${item.responseTime || 0}ms`}
@@ -257,7 +261,7 @@ export default function ServerChart({ server, className = '', timeRange = 6 }: S
         )}
       </div>
 
-      {/* Status Legend */}
+      {/* Status Legend - Show all statuses, but only disruptions appear as candles */}
       <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-gray-200">
         {Object.entries(statusLabels).map(([status, label]) => (
           <div key={status} className="flex items-center gap-2">
@@ -269,9 +273,15 @@ export default function ServerChart({ server, className = '', timeRange = 6 }: S
             <span className="text-sm font-medium text-gray-900">
               ({statusCounts[status] || 0})
             </span>
+            {status === 'down' && (
+              <span className="text-xs text-blue-600 font-medium">(کندل)</span>
+            )}
           </div>
         ))}
       </div>
     </div>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(ServerChart);

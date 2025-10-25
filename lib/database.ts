@@ -92,7 +92,7 @@ export async function initializeDatabase() {
       console.log('Warning: Could not add monitoring_data constraint:', error instanceof Error ? error.message : 'Unknown error');
     }
 
-    // Create index for better performance
+    // Create optimized indexes for better performance
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_monitoring_data_server_id 
       ON monitoring_data(server_id)
@@ -101,6 +101,36 @@ export async function initializeDatabase() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_monitoring_data_checked_at 
       ON monitoring_data(checked_at)
+    `);
+
+    // Composite index for better query performance
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_monitoring_data_server_checked 
+      ON monitoring_data(server_id, checked_at DESC)
+    `);
+
+    // Index for source_ip queries (exact match)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_monitoring_data_source_ip 
+      ON monitoring_data(source_ip)
+    `);
+
+    // Composite index for source_ip and checked_at (most important for performance)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_monitoring_data_source_checked 
+      ON monitoring_data(source_ip, checked_at DESC)
+    `);
+
+    // Additional index for time-based queries
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_monitoring_data_checked_at_desc 
+      ON monitoring_data(checked_at DESC)
+    `);
+
+    // Index for status queries
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_monitoring_data_status 
+      ON monitoring_data(status)
     `);
 
     // Create agents table (renamed from deployed_servers)

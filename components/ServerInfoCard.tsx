@@ -26,10 +26,13 @@ const statusColors = {
 
 const statusLabels = {
   up: 'آنلاین',
+  active: 'فعال',
+  inactive: 'غیر فعال',
   down: 'آفلاین',
   timeout: 'تایم‌اوت',
   error: 'خطا',
-  skipped: 'رد شده'
+  skipped: 'رد شده',
+  unknown: 'نامشخص'
 };
 
 export default function ServerInfoCard({ server, className = '' }: ServerInfoCardProps) {
@@ -195,7 +198,7 @@ export default function ServerInfoCard({ server, className = '' }: ServerInfoCar
           <h3 className="text-lg font-bold text-gray-900">{server.name}</h3>
         </div>
         <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-          server.current_status === 'up' 
+          server.current_status === 'up' || server.current_status === 'active'
             ? 'bg-green-100 text-green-800' 
             : 'bg-red-100 text-red-800'
         }`}>

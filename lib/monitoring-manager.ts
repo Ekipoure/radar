@@ -30,16 +30,11 @@ class MonitoringManager {
       console.log('🔄 Starting monitoring service...');
       monitoringService.start();
       
-      // Verify the service is running
+      // Monitoring service is now disabled - no server requests
       const status = monitoringService.getStatus();
-      if (status.isRunning) {
-        console.log('✅ Monitoring service started successfully');
-        console.log('📡 Service will check servers every 10 seconds (respecting individual intervals)');
-        this.isInitialized = true;
-      } else {
-        console.error('❌ Failed to start monitoring service');
-        throw new Error('Failed to start monitoring service');
-      }
+      console.log('✅ Monitoring service initialized (DISABLED - No server requests)');
+      console.log('📊 System will only use existing database data');
+      this.isInitialized = true;
       
       console.log('🎉 Monitoring manager initialized successfully');
       

@@ -13,23 +13,12 @@ class MonitoringService {
       return;
     }
 
-    console.log('Starting monitoring service...');
-    this.isRunning = true;
+    console.log('⚠️  Monitoring service is DISABLED - No requests will be made to servers');
+    console.log('📊 System will only use existing database data');
+    this.isRunning = false; // Keep as false to indicate no active monitoring
 
-    // Run monitoring every 10 seconds to better handle different intervals
-    this.cronJob = cron.schedule('*/10 * * * * *', async () => {
-      await this.runMonitoringCycle();
-    });
-
-    console.log('Monitoring service started');
-    
-    // Verify the cron job was created
-    if (this.cronJob) {
-      console.log('✅ Cron job scheduled successfully');
-    } else {
-      console.error('❌ Failed to create cron job');
-      this.isRunning = false;
-    }
+    // DO NOT start cron job - monitoring is disabled
+    console.log('✅ Monitoring service disabled - No server requests will be made');
   }
 
   stop() {
@@ -48,57 +37,17 @@ class MonitoringService {
   }
 
   private async runMonitoringCycle() {
-    try {
-      console.log('🔄 Starting monitoring cycle...');
-      const servers = await getServersForMonitoring();
-      
-      if (servers.length === 0) {
-        console.log('ℹ️ No active servers to monitor');
-        return;
-      }
-
-      console.log(`📊 Running monitoring cycle for ${servers.length} servers`);
-
-      // Process servers in parallel with a concurrency limit
-      const concurrencyLimit = 10;
-      const chunks = this.chunkArray(servers, concurrencyLimit);
-
-      for (const chunk of chunks) {
-        await Promise.all(
-          chunk.map(server => this.monitorSingleServer(server))
-        );
-      }
-      
-      console.log('✅ Monitoring cycle completed successfully');
-    } catch (error) {
-      console.error('❌ Error in monitoring cycle:', error);
-      // Don't let errors stop the service - log and continue
-    }
+    // MONITORING DISABLED - No server requests
+    console.log('⚠️  Monitoring cycle disabled - No server requests will be made');
+    console.log('📊 Using existing database data only');
+    return; // Exit early - no monitoring
   }
 
   private async monitorSingleServer(server: Server) {
-    try {
-      console.log(`🔍 Monitoring server: ${server.name} (${server.ip_address}) - Type: ${server.request_type}`);
-      const result = await monitorServer(server);
-      // For now, we'll save without source_ip since this runs on the main server
-      // In a real deployment, agents would send their monitoring data with source_ip
-      await saveMonitoringData(server.id, result);
-      
-      console.log(`✅ Server ${server.name} (${server.ip_address}): ${result.status}${result.response_time ? ` (${result.response_time}ms)` : ''}`);
-    } catch (error) {
-      console.error(`❌ Error monitoring server ${server.name}:`, error);
-      
-      try {
-        // Save error status
-        await saveMonitoringData(server.id, {
-          status: 'error',
-          error_message: error instanceof Error ? error.message : 'Unknown error'
-        });
-        console.log(`💾 Saved error status for server ${server.name}`);
-      } catch (saveError) {
-        console.error(`❌ Failed to save error status for server ${server.name}:`, saveError);
-      }
-    }
+    // MONITORING DISABLED - No server requests
+    console.log(`⚠️  Monitoring disabled for server: ${server.name} (${server.ip_address})`);
+    console.log('📊 Using existing database data only');
+    return; // Exit early - no monitoring
   }
 
   private chunkArray<T>(array: T[], chunkSize: number): T[][] {
@@ -135,8 +84,10 @@ class MonitoringService {
 
   getStatus() {
     return {
-      isRunning: this.isRunning,
-      hasCronJob: this.cronJob !== null
+      isRunning: false, // Always false - monitoring disabled
+      hasCronJob: false, // No cron job - monitoring disabled
+      disabled: true, // Indicate monitoring is disabled
+      message: 'Monitoring disabled - No server requests allowed'
     };
   }
 }
