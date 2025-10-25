@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AgentChart from '@/components/AgentChart';
 import GlobalFilters from '@/components/GlobalFilters';
+import AdDisplay from '@/components/AdDisplay';
 import { Agent } from '@/lib/types';
 
 export default function Home() {
@@ -193,6 +194,11 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Advertisement Section */}
+        <div className="mb-8">
+          <AdDisplay />
+        </div>
+
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6 text-center transition-all duration-300 ease-in-out">

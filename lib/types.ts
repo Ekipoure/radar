@@ -138,3 +138,23 @@ export interface UpdateDeployedServerData extends Partial<CreateDeployedServerDa
   status?: 'deployed' | 'deploying' | 'failed' | 'stopped';
   is_active?: boolean;
 }
+
+export interface Ad {
+  id: number;
+  title: string;
+  image_url: string;
+  link_url: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAdData {
+  title: string;
+  image_url: string;
+  link_url: string;
+}
+
+export interface UpdateAdData extends Partial<CreateAdData> {
+  is_active?: boolean;
+}

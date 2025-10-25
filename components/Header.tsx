@@ -6,9 +6,10 @@ interface HeaderProps {
   onLogout: () => void;
   onAddServer: () => void;
   onDeploy: () => void;
+  onAddAd: () => void;
 }
 
-export default function Header({ onLogout, onAddServer, onDeploy }: HeaderProps) {
+export default function Header({ onLogout, onAddServer, onDeploy, onAddAd }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleLogout = async () => {
@@ -52,6 +53,17 @@ export default function Header({ onLogout, onAddServer, onDeploy }: HeaderProps)
               </svg>
               <span className="hidden sm:inline">Deploy Agent</span>
               <span className="sm:hidden">Agent</span>
+            </button>
+
+            <button
+              onClick={onAddAd}
+              className="btn btn-accent flex items-center"
+            >
+              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="hidden sm:inline">Add Ad</span>
+              <span className="sm:hidden">Ad</span>
             </button>
 
             <button

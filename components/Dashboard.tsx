@@ -8,6 +8,8 @@ import DeployedServerTable from './DeployedServerTable';
 import AgentTable from './AgentTable';
 import AddServerModal from './AddServerModal';
 import DeployModal from './DeployModal';
+import AddAdModal from './AddAdModal';
+import AdTable from './AdTable';
 import Header from './Header';
 
 interface DashboardProps {
@@ -22,8 +24,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeployModal, setShowDeployModal] = useState(false);
+  const [showAddAdModal, setShowAddAdModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTable, setActiveTable] = useState<'servers' | 'agents'>('servers');
+  const [activeTable, setActiveTable] = useState<'servers' | 'agents' | 'ads'>('servers');
 
   const fetchData = async () => {
     try {
@@ -97,6 +100,15 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleAddAd = () => {
+    setShowAddAdModal(true);
+  };
+
+  const handleAdAdded = () => {
+    setShowAddAdModal(false);
+    setRefreshKey(prev => prev + 1);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -107,7 +119,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="ltr">
-      <Header onLogout={onLogout} onAddServer={() => setShowAddModal(true)} onDeploy={handleDeploy} />
+      <Header onLogout={onLogout} onAddServer={() => setShowAddModal(true)} onDeploy={handleDeploy} onAddAd={handleAddAd} />
       
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {stats && <StatsCards stats={stats} />}
@@ -136,6 +148,16 @@ export default function Dashboard({ onLogout }: DashboardProps) {
               >
                 ایجنت‌ها
               </button>
+              <button
+                onClick={() => setActiveTable('ads')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  activeTable === 'ads'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                تبلیغات
+              </button>
             </div>
           </div>
 
@@ -155,6 +177,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
               onAgentDeleted={handleDeployedServerDeleted}
             />
           )}
+
+          {activeTable === 'ads' && (
+            <AdTable 
+              onAdUpdated={handleAdAdded}
+              onAdDeleted={handleAdAdded}
+            />
+          )}
         </div>
       </main>
 
@@ -169,6 +198,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         <DeployModal
           isOpen={showDeployModal}
           onClose={() => setShowDeployModal(false)}
+        />
+      )}
+
+      {showAddAdModal && (
+        <AddAdModal
+          onClose={() => setShowAddAdModal(false)}
+          onAdAdded={handleAdAdded}
         />
       )}
     </div>

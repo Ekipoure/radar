@@ -216,6 +216,29 @@ export async function initializeDatabase() {
       console.log('Index idx_deployed_servers_deployed_at might already exist or table not ready');
     }
 
+    // Create ads table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ads (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(200) NOT NULL,
+        image_url VARCHAR(500) NOT NULL,
+        link_url VARCHAR(500) NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create index for ads table
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_ads_is_active 
+        ON ads(is_active)
+      `);
+    } catch (error) {
+      console.log('Index idx_ads_is_active might already exist or table not ready');
+    }
+
     // Insert default admin user if not exists
     const adminExists = await client.query('SELECT id FROM users WHERE username = $1', ['admin']);
     if (adminExists.rows.length === 0) {
