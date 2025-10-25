@@ -97,25 +97,25 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 table-fixed">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-20 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   تصویر
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-32 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   عنوان
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-48 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   لینک
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-24 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   وضعیت
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-32 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   تاریخ ایجاد
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-40 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   عملیات
                 </th>
               </tr>
@@ -123,27 +123,29 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
             <tbody className="bg-white divide-y divide-gray-200">
               {ads.map((ad) => (
                 <tr key={ad.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <img
-                      src={ad.image_url}
-                      alt={ad.title}
-                      className="h-12 w-16 object-cover rounded"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA2NCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAxNkwyOCAyMEwyNCAyNEwyMCAyMEwyNCAxNloiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTQwIDE2TDQ0IDIwTDQwIDI0TDM2IDIwTDQwIDE2WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMjQgMzJMMjggMzZMMjQgNDBMMjAgMzZMMjQgMzJaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik00MCAzMkw0NCAzNkw0MCA0MEwzNiAzNkw0MCAzMloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
-                      }}
-                    />
+                  <td className="px-4 py-4 text-right">
+                    <div className="flex justify-end">
+                      <img
+                        src={ad.image_url}
+                        alt={ad.title}
+                        className="h-12 w-16 object-cover rounded"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA2NCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAxNkwyOCAyMEwyNCAyNEwyMCAyMEwyNCAxNloiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTQwIDE2TDQ0IDIwTDQwIDI0TDM2IDIwTDQwIDE2WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMjQgMzJMMjggMzZMMjQgNDBMMjAgMzZMMjQgMzJaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik00MCAzMkw0NCAzNkw0MCA0MEwzNiAzNkw0MCAzMloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+                        }}
+                      />
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{ad.title}</div>
+                  <td className="px-4 py-4 text-right">
+                    <div className="text-sm font-medium text-gray-900 truncate">{ad.title}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 text-right">
                     {ad.link_url ? (
                       <a
                         href={ad.link_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:text-blue-800 truncate max-w-xs block"
+                        className="text-sm text-blue-600 hover:text-blue-800 truncate block"
                       >
                         {ad.link_url}
                       </a>
@@ -151,35 +153,37 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
                       <span className="text-sm text-gray-500">بدون لینک</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        ad.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {ad.is_active ? 'فعال' : 'غیرفعال'}
-                    </span>
+                  <td className="px-4 py-4 text-right">
+                    <div className="flex justify-end">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          ad.is_active
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {ad.is_active ? 'فعال' : 'غیرفعال'}
+                      </span>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(ad.created_at).toLocaleDateString('fa-IR')}
+                  <td className="px-4 py-4 text-right">
+                    <div className="text-sm text-gray-500">{new Date(ad.created_at).toLocaleDateString('fa-IR')}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
+                  <td className="px-4 py-4 text-right">
+                    <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 text-xs justify-end">
                       <button
                         onClick={() => handleToggleActive(ad)}
-                        className={`${
+                        className={`px-2 py-1 rounded ${
                           ad.is_active
-                            ? 'text-red-600 hover:text-red-900'
-                            : 'text-green-600 hover:text-green-900'
+                            ? 'text-red-600 hover:text-red-900 hover:bg-red-50'
+                            : 'text-green-600 hover:text-green-900 hover:bg-green-50'
                         }`}
                       >
                         {ad.is_active ? 'غیرفعال کردن' : 'فعال کردن'}
                       </button>
                       <button
                         onClick={() => handleDelete(ad)}
-                        className="text-red-600 hover:text-red-900"
+                        className="px-2 py-1 rounded text-red-600 hover:text-red-900 hover:bg-red-50"
                       >
                         حذف
                       </button>

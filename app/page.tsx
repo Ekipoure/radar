@@ -200,7 +200,7 @@ export default function Home() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6 text-center transition-all duration-300 ease-in-out">
             <div className="text-3xl font-bold text-gray-900 transition-all duration-500 ease-in-out">{stats.total}</div>
             <div className="text-sm text-gray-600">کل ایجنت‌ها</div>
@@ -217,7 +217,7 @@ export default function Home() {
             <div className="text-3xl font-bold text-blue-600 transition-all duration-500 ease-in-out">{stats.iranian}</div>
             <div className="text-sm text-gray-600">کل ایجنت‌ها</div>
           </div>
-        </div>
+        </div> */}
 
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
