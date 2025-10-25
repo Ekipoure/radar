@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Vazirmatn } from 'next/font/google'
 import './globals.css'
+import BannerProvider from '@/components/BannerProvider'
 
 const vazirmatn = Vazirmatn({ 
   subsets: ['arabic', 'latin'],
@@ -25,7 +26,9 @@ export default function RootLayout({
         <meta name="theme-color" content="#3B82F6" />
       </head>
       <body className={`${vazirmatn.className} font-sans`}>
-        {children}
+        <BannerProvider>
+          {children}
+        </BannerProvider>
       </body>
     </html>
   )

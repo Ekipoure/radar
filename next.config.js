@@ -3,6 +3,14 @@ const nextConfig = {
   env: {
     TZ: 'Asia/Tehran',
   },
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: '/api/uploads/:path*',
+      },
+    ];
+  },
   webpack: (config, { isServer }) => {
     // Handle SSH2 native modules
     if (isServer) {

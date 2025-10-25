@@ -14,6 +14,8 @@ export default function AddAdModal({ onClose, onAdAdded }: AddAdModalProps) {
     image_url: '',
     link_url: ''
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,13 +26,47 @@ export default function AddAdModal({ onClose, onAdAdded }: AddAdModalProps) {
 
     try {
       const token = localStorage.getItem('token');
+      
+      // Validate that at least one image source is provided
+      if (!selectedFile && !formData.image_url) {
+        setError('لطفاً یک تصویر آپلود کنید یا آدرس تصویر وارد کنید');
+        setLoading(false);
+        return;
+      }
+      
+      // If a file is selected, upload it first
+      let imageUrl = formData.image_url;
+      if (selectedFile) {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', selectedFile);
+        
+        const uploadResponse = await fetch('/api/ads/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formDataUpload
+        });
+        
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || 'خطا در آپلود فایل');
+        }
+        
+        const uploadData = await uploadResponse.json();
+        imageUrl = uploadData.url;
+      }
+
       const response = await fetch('/api/ads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          image_url: imageUrl
+        })
       });
 
       if (response.ok) {
@@ -42,7 +78,7 @@ export default function AddAdModal({ onClose, onAdAdded }: AddAdModalProps) {
       }
     } catch (error) {
       console.error('Error creating ad:', error);
-      setError('خطا در ارتباط با سرور');
+      setError(error instanceof Error ? error.message : 'خطا در ارتباط با سرور');
     } finally {
       setLoading(false);
     }
@@ -54,6 +90,23 @@ export default function AddAdModal({ onClose, onAdAdded }: AddAdModalProps) {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearFile = () => {
+    setSelectedFile(null);
+    setImagePreview('');
   };
 
   return (
@@ -90,24 +143,73 @@ export default function AddAdModal({ onClose, onAdAdded }: AddAdModalProps) {
             </div>
 
             <div>
-              <label htmlFor="image_url" className="block text-sm font-medium text-gray-700 mb-2">
-                آدرس تصویر
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                تصویر تبلیغ
               </label>
-              <input
-                type="url"
-                id="image_url"
-                name="image_url"
-                value={formData.image_url}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="https://example.com/image.jpg"
-              />
+              <div className="space-y-3">
+                {/* File Upload Option */}
+                <div>
+                  <label htmlFor="file_upload" className="block text-sm text-gray-600 mb-1">
+                    آپلود فایل
+                  </label>
+                  <input
+                    type="file"
+                    id="file_upload"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {selectedFile && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-sm text-gray-600">{selectedFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={clearFile}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Image URL Option */}
+                <div>
+                  <label htmlFor="image_url" className="block text-sm text-gray-600 mb-1">
+                    یا آدرس تصویر
+                  </label>
+                  <input
+                    type="url"
+                    id="image_url"
+                    name="image_url"
+                    value={formData.image_url}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+
+                {/* Image Preview */}
+                {(imagePreview || formData.image_url) && (
+                  <div className="mt-3">
+                    <label className="block text-sm text-gray-600 mb-1">پیش‌نمایش تصویر</label>
+                    <img
+                      src={imagePreview || formData.image_url}
+                      alt="Preview"
+                      className="w-full h-32 object-cover rounded-lg border"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
               <label htmlFor="link_url" className="block text-sm font-medium text-gray-700 mb-2">
-                لینک مقصد
+                لینک مقصد (اختیاری)
               </label>
               <input
                 type="url"
@@ -115,7 +217,6 @@ export default function AddAdModal({ onClose, onAdAdded }: AddAdModalProps) {
                 name="link_url"
                 value={formData.link_url}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="https://example.com"
               />

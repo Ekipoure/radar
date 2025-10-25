@@ -138,14 +138,18 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
                     <div className="text-sm font-medium text-gray-900">{ad.title}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <a
-                      href={ad.link_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800 truncate max-w-xs block"
-                    >
-                      {ad.link_url}
-                    </a>
+                    {ad.link_url ? (
+                      <a
+                        href={ad.link_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:text-blue-800 truncate max-w-xs block"
+                      >
+                        {ad.link_url}
+                      </a>
+                    ) : (
+                      <span className="text-sm text-gray-500">بدون لینک</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span

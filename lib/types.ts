@@ -152,9 +152,33 @@ export interface Ad {
 export interface CreateAdData {
   title: string;
   image_url: string;
-  link_url: string;
+  link_url?: string;
 }
 
 export interface UpdateAdData extends Partial<CreateAdData> {
+  is_active?: boolean;
+}
+
+export interface Banner {
+  id: number;
+  text: string;
+  is_active: boolean;
+  speed: number; // Animation speed in seconds
+  color: string;
+  background_color: string;
+  font_size: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateBannerData {
+  text: string;
+  speed?: number;
+  color?: string;
+  background_color?: string;
+  font_size?: number;
+}
+
+export interface UpdateBannerData extends Partial<CreateBannerData> {
   is_active?: boolean;
 }

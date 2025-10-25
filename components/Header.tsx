@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface HeaderProps {
   onLogout: () => void;
@@ -11,6 +11,26 @@ interface HeaderProps {
 
 export default function Header({ onLogout, onAddServer, onDeploy, onAddAd }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
+        setShowActionMenu(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -44,40 +64,65 @@ export default function Header({ onLogout, onAddServer, onDeploy, onAddAd }: Hea
           </div>
 
           <div className="flex items-center space-x-4">
-            <button
-              onClick={onDeploy}
-              className="btn btn-secondary flex items-center"
-            >
-              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-              </svg>
-              <span className="hidden sm:inline">Deploy Agent</span>
-              <span className="sm:hidden">Agent</span>
-            </button>
+            {/* Hamburger Menu for Actions */}
+            <div className="relative" ref={actionMenuRef}>
+              <button
+                onClick={() => setShowActionMenu(!showActionMenu)}
+                className="flex items-center justify-center w-10 h-10 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                title="Actions Menu"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
 
-            <button
-              onClick={onAddAd}
-              className="btn btn-accent flex items-center"
-            >
-              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className="hidden sm:inline">Add Ad</span>
-              <span className="sm:hidden">Ad</span>
-            </button>
+              {showActionMenu && (
+                <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                  <div className="py-2">
+                    <button
+                      onClick={() => {
+                        onAddServer();
+                        setShowActionMenu(false);
+                      }}
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <svg className="h-5 w-5 mr-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>Add Server</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        onAddAd();
+                        setShowActionMenu(false);
+                      }}
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <svg className="h-5 w-5 mr-3 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Add Ad</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        onDeploy();
+                        setShowActionMenu(false);
+                      }}
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <svg className="h-5 w-5 mr-3 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                      </svg>
+                      <span>Deploy Agent</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
-            <button
-              onClick={onAddServer}
-              className="btn btn-primary flex items-center"
-            >
-              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <span className="hidden sm:inline">Add Server</span>
-              <span className="sm:hidden">Add</span>
-            </button>
-
-            <div className="relative">
+            <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"

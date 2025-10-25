@@ -56,27 +56,38 @@ export async function POST(request: NextRequest) {
     const { title, image_url, link_url }: CreateAdData = body;
 
     // Validate required fields
-    if (!title || !image_url || !link_url) {
+    if (!title || !image_url) {
       return NextResponse.json(
-        { error: 'Title, image URL, and link URL are required' },
+        { error: 'Title and image URL are required' },
         { status: 400 }
       );
     }
 
-    // Validate URLs
+    // Validate image URL
     try {
       new URL(image_url);
-      new URL(link_url);
     } catch {
       return NextResponse.json(
-        { error: 'Invalid URL format' },
+        { error: 'Invalid image URL format' },
         { status: 400 }
       );
+    }
+
+    // Validate link URL if provided
+    if (link_url) {
+      try {
+        new URL(link_url);
+      } catch {
+        return NextResponse.json(
+          { error: 'Invalid link URL format' },
+          { status: 400 }
+        );
+      }
     }
 
     const result = await pool.query(
       'INSERT INTO ads (title, image_url, link_url) VALUES ($1, $2, $3) RETURNING *',
-      [title, image_url, link_url]
+      [title, image_url, link_url || null]
     );
 
     const newAd: Ad = result.rows[0];

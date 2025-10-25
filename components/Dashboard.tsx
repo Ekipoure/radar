@@ -10,6 +10,7 @@ import AddServerModal from './AddServerModal';
 import DeployModal from './DeployModal';
 import AddAdModal from './AddAdModal';
 import AdTable from './AdTable';
+import BannerTable from './BannerTable';
 import Header from './Header';
 
 interface DashboardProps {
@@ -26,7 +27,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [showDeployModal, setShowDeployModal] = useState(false);
   const [showAddAdModal, setShowAddAdModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTable, setActiveTable] = useState<'servers' | 'agents' | 'ads'>('servers');
+  const [activeTable, setActiveTable] = useState<'servers' | 'agents' | 'ads' | 'banners'>('servers');
 
   const fetchData = async () => {
     try {
@@ -158,6 +159,16 @@ export default function Dashboard({ onLogout }: DashboardProps) {
               >
                 تبلیغات
               </button>
+              <button
+                onClick={() => setActiveTable('banners')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  activeTable === 'banners'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                بنرها
+              </button>
             </div>
           </div>
 
@@ -182,6 +193,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             <AdTable 
               onAdUpdated={handleAdAdded}
               onAdDeleted={handleAdAdded}
+            />
+          )}
+
+          {activeTable === 'banners' && (
+            <BannerTable 
+              onBannerUpdated={() => setRefreshKey(prev => prev + 1)}
+              onBannerDeleted={() => setRefreshKey(prev => prev + 1)}
             />
           )}
         </div>

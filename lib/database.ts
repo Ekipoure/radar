@@ -239,6 +239,37 @@ export async function initializeDatabase() {
       console.log('Index idx_ads_is_active might already exist or table not ready');
     }
 
+    // Create banners table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS banners (
+        id SERIAL PRIMARY KEY,
+        text TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        speed INTEGER DEFAULT 10,
+        color VARCHAR(7) DEFAULT '#FFFFFF',
+        background_color VARCHAR(7) DEFAULT '#3B82F6',
+        font_size INTEGER DEFAULT 24,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Add font_size column to existing banners table if it doesn't exist
+    await client.query(`
+      ALTER TABLE banners 
+      ADD COLUMN IF NOT EXISTS font_size INTEGER DEFAULT 24
+    `);
+
+    // Create index for banners table
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_banners_is_active 
+        ON banners(is_active)
+      `);
+    } catch (error) {
+      console.log('Index idx_banners_is_active might already exist or table not ready');
+    }
+
     // Insert default admin user if not exists
     const adminExists = await client.query('SELECT id FROM users WHERE username = $1', ['admin']);
     if (adminExists.rows.length === 0) {
