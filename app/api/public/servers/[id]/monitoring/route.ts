@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMonitoringHistory } from '@/lib/monitoring';
+import { getMonitoringHistory, getMonitoringHistoryByDateRange } from '@/lib/monitoring';
 import { getCachedData, generateCacheKey } from '@/lib/cache';
 import pool from '@/lib/database';
 
@@ -11,6 +11,10 @@ export async function GET(
     const serverId = parseInt(params.id);
     const { searchParams } = new URL(request.url);
     const hours = parseFloat(searchParams.get('hours') || '6');
+    
+    // Date/time filter parameters
+    const startDateTime = searchParams.get('start_datetime');
+    const endDateTime = searchParams.get('end_datetime');
 
     if (isNaN(serverId)) {
       return NextResponse.json({ error: 'Invalid server ID' }, { status: 400 });
@@ -30,8 +34,15 @@ export async function GET(
       client.release();
     }
 
-    // Get monitoring data (cache disabled temporarily)
-    const monitoringData = await getMonitoringHistory(serverId, hours);
+    // Get monitoring data with appropriate filter
+    let monitoringData;
+    if (startDateTime && endDateTime) {
+      // Use specific date/time range
+      monitoringData = await getMonitoringHistoryByDateRange(serverId, startDateTime, endDateTime);
+    } else {
+      // Use hours-based range (default 6 hours)
+      monitoringData = await getMonitoringHistory(serverId, hours);
+    }
 
     return NextResponse.json(monitoringData);
   } catch (error) {

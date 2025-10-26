@@ -5,28 +5,35 @@ import Link from 'next/link';
 import AgentChart from '@/components/AgentChart';
 import GlobalFilters from '@/components/GlobalFilters';
 import AdDisplay from '@/components/AdDisplay';
+import DateTimeFilterModal from '@/components/DateTimeFilterModal';
 import { Agent } from '@/lib/types';
+import { formatHeaderTime, formatTableTime, getIranTime, persianToGregorian } from '@/lib/timezone';
 
 export default function Home() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'charts' | 'cards'>('charts');
   const [chartDisplayMode, setChartDisplayMode] = useState<'single' | 'dual'>('dual');
+  const [chartType, setChartType] = useState<'agents'>('agents');
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   // Global filter state
-  const [globalTimeRange, setGlobalTimeRange] = useState(6);
   const [globalSelectedServers, setGlobalSelectedServers] = useState<number[]>([]);
+  
+  // Date/Time filter state
+  const [isDateTimeFilterOpen, setIsDateTimeFilterOpen] = useState(false);
+  const [dateTimeFilter, setDateTimeFilter] = useState<{ date: string; timeRange: string } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Update current time every minute
   useEffect(() => {
     // Set initial time on client side only
-    setCurrentTime(new Date());
+    setCurrentTime(getIranTime());
     
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(getIranTime());
     }, 60000);
     return () => clearInterval(timer);
   }, []);
@@ -72,7 +79,7 @@ export default function Home() {
           console.error('Agents API error:', agentsResponse.status, errorText);
         }
         
-        setLastUpdate(new Date());
+        setLastUpdate(getIranTime());
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -112,7 +119,7 @@ export default function Home() {
             setAgents(data.agents);
           }
           
-          setLastUpdate(new Date());
+          setLastUpdate(getIranTime());
         } catch (error) {
           console.error('Failed to refresh data:', error);
         }
@@ -120,7 +127,7 @@ export default function Home() {
       
       fetchData();
     }
-  }, [agents.map(a => `${a.id}-${a.current_status}`).join(',')]);
+  }, [agents.map(a => `${a.id}-${a.status}`).join(',')]);
 
   const filteredAgents = agents;
 
@@ -138,6 +145,66 @@ export default function Home() {
   };
 
   const stats = getStats();
+
+  // Handle date/time filter application
+  const handleDateTimeFilterApply = (filter: { date: string; timeRange: string }) => {
+    setDateTimeFilter(filter);
+    console.log('Date/Time Filter Applied:', filter);
+    
+    // Apply the filter to chart data
+    applyDateTimeFilter(filter);
+    
+    // Force refresh of all charts by updating a refresh key
+    setRefreshKey(Date.now());
+  };
+
+  // Apply date/time filter to chart data
+  const applyDateTimeFilter = async (filter: { date: string; timeRange: string }) => {
+    try {
+      // Convert Persian date to Gregorian for API call
+      const persianDateParts = filter.date.split('/');
+      const persianYear = parseInt(persianDateParts[0]);
+      const persianMonth = parseInt(persianDateParts[1]);
+      const persianDay = parseInt(persianDateParts[2]);
+      
+      // Use accurate Persian to Gregorian conversion
+      const gregorianDate = persianToGregorian({
+        year: persianYear,
+        month: persianMonth,
+        day: persianDay
+      });
+      
+      // Parse time range
+      const timeRangeParts = filter.timeRange.split(' – ');
+      const startTime = timeRangeParts[0];
+      const endTime = timeRangeParts[1];
+      
+      // Create date range for filtering - use local timezone
+      const startDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+        parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0, 0);
+      const endDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+        parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 59, 999);
+      
+      console.log('Filtering data from:', startDateTime, 'to:', endDateTime);
+      
+      // Here you would typically make an API call to get filtered data
+      // For now, we'll just log the filter parameters
+      console.log('Filter parameters:', {
+        startDateTime: startDateTime.toISOString(),
+        endDateTime: endDateTime.toISOString(),
+        persianDate: filter.date,
+        timeRange: filter.timeRange,
+        gregorianDate: gregorianDate.toDateString()
+      });
+      
+      // TODO: Implement actual API call to get filtered chart data
+      // const filteredData = await fetchFilteredChartData(startDateTime, endDateTime);
+      // setAgents(filteredData);
+      
+    } catch (error) {
+      console.error('Error applying date/time filter:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50" dir="rtl">
@@ -163,22 +230,10 @@ export default function Home() {
               <div className="text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="سیستم فعال - داده‌ها به صورت خودکار به‌روزرسانی می‌شوند"></div>
-                  <span className="text-xs" suppressHydrationWarning>آخرین به‌روزرسانی: {lastUpdate ? lastUpdate.toLocaleString('fa-IR', {
-                    timeZone: 'Asia/Tehran',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                  }) : 'در حال بارگذاری...'}</span>
+                  <span className="text-xs" suppressHydrationWarning>آخرین به‌روزرسانی: {lastUpdate ? formatTableTime(lastUpdate) : 'در حال بارگذاری...'}</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-1" suppressHydrationWarning>
-                  {currentTime ? currentTime.toLocaleString('fa-IR', {
-                    timeZone: 'Asia/Tehran',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  }) : 'در حال بارگذاری...'}
+                  {currentTime ? formatHeaderTime(currentTime) : 'در حال بارگذاری...'}
                 </div>
               </div>
               <Link
@@ -225,12 +280,32 @@ export default function Home() {
             <button
               onClick={() => setChartType('agents')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                true
+                chartType === 'agents'
                   ? 'bg-purple-500 text-white'
                   : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
             >
               چارت‌های ایجنت
+            </button>
+            
+            {/* Date/Time Filter Button */}
+            <button
+              onClick={() => setIsDateTimeFilterOpen(true)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                dateTimeFilter
+                  ? 'bg-green-500 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              فیلتر بازه زمانی
+              {dateTimeFilter && (
+                <span className="bg-white bg-opacity-20 px-2 py-1 rounded text-xs">
+                  فعال
+                </span>
+              )}
             </button>
           </div>
           
@@ -285,10 +360,39 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Active Date/Time Filter Display */}
+        {dateTimeFilter && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-green-800">فیلتر بازه زمانی فعال</div>
+                  <div className="text-sm text-green-600">
+                    تاریخ: {dateTimeFilter.date} | بازه: {dateTimeFilter.timeRange}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setDateTimeFilter(null);
+                  // Force refresh of all charts
+                  setRefreshKey(Date.now());
+                }}
+                className="text-green-600 hover:text-green-800 text-sm font-medium"
+              >
+                حذف فیلتر
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Global Filters */}
         <GlobalFilters
-          timeRange={globalTimeRange}
-          onTimeRangeChange={setGlobalTimeRange}
           selectedServers={globalSelectedServers}
           onSelectedServersChange={setGlobalSelectedServers}
           showServerFilter={true}
@@ -313,17 +417,17 @@ export default function Home() {
               {filteredAgents.map((agent) => (
                 viewMode === 'charts' ? (
                   <AgentChart 
-                    key={agent.id} 
+                    key={`${agent.id}-${refreshKey}`} 
                     agent={agent} 
-                    timeRange={globalTimeRange}
                     selectedServers={globalSelectedServers}
+                    dateTimeFilter={dateTimeFilter}
                   />
                 ) : (
                   <div key={agent.id} className="bg-white rounded-xl shadow-lg p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{agent.name}</h3>
                     <div className="text-sm text-gray-600">
                       <div>IP: {agent.server_ip}</div>
-                      <div>وضعیت: {agent.current_status === 'active' ? 'فعال' : 'غیرفعال'}</div>
+                      <div>وضعیت: {agent.is_active ? 'فعال' : 'غیرفعال'}</div>
                       <div>پورت: {agent.port}</div>
                     </div>
                   </div>
@@ -342,6 +446,13 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Date/Time Filter Modal */}
+      <DateTimeFilterModal
+        isOpen={isDateTimeFilterOpen}
+        onClose={() => setIsDateTimeFilterOpen(false)}
+        onApplyFilter={handleDateTimeFilterApply}
+      />
     </div>
   );
 }

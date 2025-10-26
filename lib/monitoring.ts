@@ -113,6 +113,33 @@ export async function getMonitoringHistory(
   });
 }
 
+export async function getMonitoringHistoryByDateRange(
+  serverId: number,
+  startDateTime: string,
+  endDateTime: string
+): Promise<MonitoringData[]> {
+  return measureDBQuery(`getMonitoringHistoryByDateRange-${serverId}`, async () => {
+    const client = await pool.connect();
+    
+    try {
+      // Query with specific date/time range
+      const result = await client.query(
+        `SELECT id, server_id, source_ip, status, response_time, error_message, checked_at 
+         FROM monitoring_data 
+         WHERE server_id = $1 
+         AND checked_at >= $2 
+         AND checked_at <= $3
+         ORDER BY checked_at DESC
+         LIMIT 1000`,
+        [serverId, startDateTime, endDateTime]
+      );
+      return result.rows;
+    } finally {
+      client.release();
+    }
+  });
+}
+
 export async function getMonitoringDataBySource(
   sourceIp: string,
   hours: number = 24
@@ -131,6 +158,35 @@ export async function getMonitoringDataBySource(
          ORDER BY md.checked_at DESC
          LIMIT 200`,
         [sourceIp]
+      );
+      return result.rows;
+    } finally {
+      client.release();
+    }
+  });
+}
+
+export async function getMonitoringDataBySourceWithDateRange(
+  sourceIp: string,
+  startDateTime: string,
+  endDateTime: string
+): Promise<MonitoringData[]> {
+  return measureDBQuery(`getMonitoringDataBySourceWithDateRange-${sourceIp}`, async () => {
+    const client = await pool.connect();
+    
+    try {
+      // Query with specific date/time range
+      const result = await client.query(
+        `SELECT md.id, md.server_id, md.source_ip, md.status, md.response_time, md.error_message, md.checked_at,
+                s.name as server_name, s.color as server_color
+         FROM monitoring_data md
+         JOIN servers s ON md.server_id = s.id
+         WHERE md.source_ip = $1 
+         AND md.checked_at >= $2 
+         AND md.checked_at <= $3
+         ORDER BY md.checked_at DESC
+         LIMIT 200`,
+        [sourceIp, startDateTime, endDateTime]
       );
       return result.rows;
     } finally {
@@ -173,6 +229,84 @@ export async function getAgentsWithMonitoringData(hours: number = 24): Promise<a
         ORDER BY checked_at DESC
         LIMIT 5
       `, [agent.server_ip]);
+      
+      const recentData = recentResult.rows;
+      
+      // Calculate status based on recent data
+      let currentStatus = 'unknown';
+      if (recentData.length > 0) {
+        const successCount = recentData.filter(r => r.status === 'up').length;
+        const failedCount = recentData.filter(r => 
+          ['down', 'timeout', 'error', 'skipped'].includes(r.status)
+        ).length;
+        
+        if (failedCount === recentData.length && recentData.length > 0) {
+          currentStatus = 'inactive';
+        } else if (successCount > 0) {
+          currentStatus = 'active';
+        } else {
+          currentStatus = 'unknown';
+        }
+      } else {
+        // If no recent data, use the agent's deployment status
+        currentStatus = agent.agent_status === 'deployed' ? 'active' : 'inactive';
+      }
+      
+      agents.push({
+        ...agent,
+        current_status: currentStatus,
+        success_count: recentData.filter(r => r.status === 'up').length,
+        failed_count: recentData.filter(r => 
+          ['down', 'timeout', 'error', 'skipped'].includes(r.status)
+        ).length,
+        total_recent_checks: recentData.length
+      });
+    }
+    
+    return agents;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getAgentsWithMonitoringDataByDateRange(
+  startDateTime: string,
+  endDateTime: string
+): Promise<any[]> {
+  const client = await pool.connect();
+  
+  try {
+    const result = await client.query(`
+      SELECT DISTINCT 
+        a.id,
+        a.name,
+        a.server_ip::text as server_ip,
+        a.status as agent_status,
+        a.deployed_at,
+        a.last_checked as agent_last_checked,
+        COUNT(md.id) as monitoring_count,
+        MAX(md.checked_at) as last_monitoring_check
+      FROM agents a
+      LEFT JOIN monitoring_data md ON md.source_ip::text LIKE a.server_ip::text || '%'
+        AND md.checked_at >= $1 AND md.checked_at <= $2
+      WHERE a.is_active = true
+      GROUP BY a.id, a.name, a.server_ip, a.status, a.deployed_at, a.last_checked
+      ORDER BY a.name
+    `, [startDateTime, endDateTime]);
+    
+    // Calculate actual status based on recent monitoring data
+    const agents = [];
+    for (const agent of result.rows) {
+      // Get recent monitoring data for this agent within the date range
+      const recentResult = await client.query(`
+        SELECT status, checked_at
+        FROM monitoring_data
+        WHERE source_ip = $1
+          AND checked_at >= $2 
+          AND checked_at <= $3
+        ORDER BY checked_at DESC
+        LIMIT 5
+      `, [agent.server_ip, startDateTime, endDateTime]);
       
       const recentData = recentResult.rows;
       

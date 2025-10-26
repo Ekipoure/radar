@@ -9,16 +9,12 @@ interface DestinationServer {
 }
 
 interface GlobalFiltersProps {
-  timeRange: number;
-  onTimeRangeChange: (timeRange: number) => void;
   selectedServers: number[];
   onSelectedServersChange: (servers: number[]) => void;
   showServerFilter?: boolean;
 }
 
 export default function GlobalFilters({ 
-  timeRange, 
-  onTimeRangeChange, 
   selectedServers, 
   onSelectedServersChange,
   showServerFilter = true 
@@ -73,27 +69,7 @@ export default function GlobalFilters({
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-4" dir="rtl">
       <div className="flex flex-col gap-4">
-        {/* Time Range Filter - First Row */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-700">بازه زمانی:</span>
-          <div className="flex gap-1">
-            {[1, 3, 6, 12, 24].map(hours => (
-              <button
-                key={hours}
-                onClick={() => onTimeRangeChange(hours)}
-                className={`px-3 py-1 text-xs rounded transition-colors ${
-                  timeRange === hours
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {hours}ساعت
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Server Filter - Second Row */}
+        {/* Server Filter */}
         {showServerFilter && (
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-gray-700">فیلتر سرورها:</span>

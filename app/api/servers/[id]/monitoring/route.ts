@@ -9,7 +9,7 @@ export async function GET(
   try {
     const serverId = parseInt(params.id);
     const { searchParams } = new URL(request.url);
-    const hours = parseFloat(searchParams.get('hours') || '1');
+    const hours = parseFloat(searchParams.get('hours') || '6');
 
     if (isNaN(serverId)) {
       return NextResponse.json({ error: 'Invalid server ID' }, { status: 400 });

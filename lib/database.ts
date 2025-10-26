@@ -9,6 +9,15 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false),
 });
 
+// Ensure timezone is set for all connections
+pool.on('connect', async (client) => {
+  try {
+    await client.query("SET timezone = 'Asia/Tehran'");
+  } catch (error) {
+    console.error('Failed to set timezone:', error);
+  }
+});
+
 export default pool;
 
 // Database initialization
@@ -16,6 +25,8 @@ export async function initializeDatabase() {
   const client = await pool.connect();
   
   try {
+    // Set timezone to Iran/Tehran for this session
+    await client.query("SET timezone = 'Asia/Tehran'");
     // Create users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (

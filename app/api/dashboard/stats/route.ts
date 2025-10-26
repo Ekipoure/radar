@@ -4,6 +4,9 @@ import { DashboardStats } from '@/lib/types';
 import { verifyToken } from '@/lib/auth';
 import { getServersWithAdvancedStatus } from '@/lib/monitoring';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 function getAuthToken(request: NextRequest): string | null {
   return request.cookies.get('auth-token')?.value || null;
 }

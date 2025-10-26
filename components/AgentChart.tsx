@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { MonitoringData } from '@/lib/types';
+import { formatChartTime, getIranTime, persianToGregorian } from '@/lib/timezone';
 
 interface AgentChartProps {
   agent: {
@@ -17,8 +18,8 @@ interface AgentChartProps {
     updated_at: string;
   };
   className?: string;
-  timeRange?: number;
   selectedServers?: number[];
+  dateTimeFilter?: { date: string; timeRange: string } | null;
 }
 
 interface ChartData {
@@ -53,7 +54,7 @@ const statusLabels = {
   skipped: 'رد شده'
 };
 
-function AgentChart({ agent, className = '', timeRange = 6, selectedServers = [] }: AgentChartProps) {
+function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilter = null }: AgentChartProps) {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [allChartData, setAllChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,10 +67,10 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
 
   // Update current time every minute
   useEffect(() => {
-    setCurrentTime(new Date());
+    setCurrentTime(getIranTime());
     
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(getIranTime());
     }, 60000);
     return () => clearInterval(timer);
   }, []);
@@ -77,7 +78,9 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
   // Apply server filter to chart data - memoized for performance
   const applyServerFilter = useCallback((data: ChartData[]) => {
     if (selectedServers.length === 0) {
-      setChartData([]);
+      // If no servers selected, show all disruptions
+      const allDisruptions = data.filter(item => item.status !== 'up');
+      setChartData(allDisruptions);
       return;
     }
     
@@ -102,10 +105,78 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
         setIsRefreshing(true);
       }
       
-      console.log(`Fetching monitoring data for agent ${agent.name} (${agent.server_ip}) with ${timeRange} hours`);
+      console.log(`Fetching monitoring data for agent ${agent.name} (${agent.server_ip})`);
       
-      // Use API endpoint instead of direct database access
-      const response = await fetch(`/api/agents/monitoring?source_ip=${agent.server_ip}&hours=${timeRange}`);
+      let url = `/api/agents/monitoring?source_ip=${agent.server_ip}`;
+      
+      // Use date/time filter - this is now required
+      if (dateTimeFilter) {
+        try {
+          // Convert Persian date to Gregorian for API call
+          const persianDateParts = dateTimeFilter.date.split('/');
+          const persianYear = parseInt(persianDateParts[0]);
+          const persianMonth = parseInt(persianDateParts[1]);
+          const persianDay = parseInt(persianDateParts[2]);
+          
+          console.log('Parsed Persian date parts:', { persianYear, persianMonth, persianDay });
+          
+          // Use accurate Persian to Gregorian conversion
+          const gregorianDate = persianToGregorian({
+            year: persianYear,
+            month: persianMonth,
+            day: persianDay
+          });
+          
+          console.log('Gregorian conversion result:', gregorianDate);
+          console.log('Is valid date:', !isNaN(gregorianDate.getTime()));
+          
+          // Parse time range first
+          const timeRangeParts = dateTimeFilter.timeRange.split(' – ');
+          const startTime = timeRangeParts[0];
+          const endTime = timeRangeParts[1];
+          
+          // Check if conversion was successful
+          if (isNaN(gregorianDate.getTime())) {
+            console.error('Failed to convert Persian date to Gregorian, using current date');
+            const currentDate = new Date();
+            const startDateTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 
+              parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0, 0);
+            const endDateTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 
+              parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 59, 999);
+            
+            url += `&start_datetime=${startDateTime.toISOString()}&end_datetime=${endDateTime.toISOString()}`;
+            console.log(`Using fallback current date filter: ${startDateTime.toISOString()} to ${endDateTime.toISOString()}`);
+          } else {
+            // Create date range for filtering - use local timezone
+            const startDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+              parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0, 0);
+            const endDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+              parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 59, 999);
+            
+            // Validate dates before using toISOString
+            if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+              console.error('Invalid date range created:', { startDateTime, endDateTime, gregorianDate });
+              throw new Error('Invalid date range');
+            }
+            
+            url += `&start_datetime=${startDateTime.toISOString()}&end_datetime=${endDateTime.toISOString()}`;
+            console.log(`Using date/time filter: ${startDateTime.toISOString()} to ${endDateTime.toISOString()}`);
+            console.log(`Original Persian date: ${dateTimeFilter.date}, Time range: ${dateTimeFilter.timeRange}`);
+            console.log(`Converted Gregorian date: ${gregorianDate.toDateString()}`);
+            console.log(`Start time: ${startTime}, End time: ${endTime}`);
+          }
+        } catch (error) {
+          console.error('Error processing date/time filter:', error);
+          console.log('Falling back to default 6 hours filter');
+          url += `&hours=6`;
+        }
+      } else {
+        // If no date/time filter is set, use default 6 hours (last 6 hours)
+        url += `&hours=6`;
+        console.log(`No date/time filter set, using default 6 hours (last 6 hours)`);
+      }
+      
+      const response = await fetch(url);
       console.log(`Response status: ${response.status}`);
       
       if (response.ok) {
@@ -115,13 +186,7 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
         // Convert to chart data, show ALL data (not just disruptions), and sort by time
         const allData: ChartData[] = data.monitoringData
           .map((item: any) => ({
-            time: new Date(item.checked_at).toLocaleString('fa-IR', {
-              timeZone: 'Asia/Tehran',
-              hour: '2-digit',
-              minute: '2-digit',
-              day: '2-digit',
-              month: '2-digit'
-            }),
+            time: formatChartTime(item.checked_at),
             status: item.status,
             responseTime: item.response_time ? parseFloat(item.response_time) : null,
             serverName: item.server_name,
@@ -132,6 +197,8 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
           .sort((a: ChartData, b: ChartData) => new Date(a.time).getTime() - new Date(b.time).getTime());
         
         console.log(`Processed chart data:`, allData);
+        console.log(`Date/time filter applied:`, dateTimeFilter ? 'Yes' : 'No');
+        console.log(`Total records found: ${allData.length}`);
         
         // Only update if data has actually changed to prevent jumping
         const dataChanged = JSON.stringify(allData) !== JSON.stringify(allChartData);
@@ -147,6 +214,7 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
       } else {
         const errorText = await response.text();
         console.error(`API error: ${response.status} - ${errorText}`);
+        console.error(`URL that failed: ${url}`);
       }
     } catch (error) {
       console.error('Error fetching chart data:', error);
@@ -158,7 +226,7 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
         setIsRefreshing(false);
       }
     }
-  }, [agent.name, agent.server_ip, timeRange, applyServerFilter, lastFetchTime]);
+  }, [agent.name, agent.server_ip, dateTimeFilter, applyServerFilter, lastFetchTime]);
 
   useEffect(() => {
     // Initial load
@@ -251,11 +319,11 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
               {agent.server_ip}
             </span>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              agent.current_status === 'active' 
+              agent.is_active 
                 ? 'bg-green-100 text-green-800' 
                 : 'bg-red-100 text-red-800'
             }`}>
-              {agent.current_status === 'active' ? 'فعال' : 'غیرفعال'}
+              {agent.is_active ? 'فعال' : 'غیرفعال'}
             </span>
             <span className="text-xs">
               پورت: {agent.port}
@@ -279,6 +347,9 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
         <div className="bg-gray-50 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-red-600">{disruptionCount}</div>
           <div className="text-xs text-gray-600">تعداد اختلالات</div>
+          <div className="text-xs text-blue-600 mt-1">
+            {selectedServers.length === 0 ? 'همه سرورها' : `${selectedServers.length} سرور انتخاب شده`}
+          </div>
         </div>
       </div>
 
@@ -291,8 +362,8 @@ function AgentChart({ agent, className = '', timeRange = 6, selectedServers = []
         ) : selectedServers.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-gray-500">
             <div className="text-center">
-              <div className="text-lg mb-2">⚠️ هیچ سروری انتخاب نشده</div>
-              <div className="text-sm">لطفاً حداقل یک سرور مقصد را انتخاب کنید</div>
+              <div className="text-lg mb-2">📊 نمایش تمام اختلالات</div>
+              <div className="text-sm">در حال نمایش تمام اختلالات (بدون فیلتر سرور)</div>
             </div>
           </div>
         ) : chartData.length === 0 ? (

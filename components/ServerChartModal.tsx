@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { ServerWithStatus, MonitoringData } from '@/lib/types';
+import { formatTableTime, formatTooltipTime, persianToGregorian } from '@/lib/timezone';
 
 interface ServerChartModalProps {
   server: ServerWithStatus;
   isOpen: boolean;
   onClose: () => void;
+  dateTimeFilter?: { date: string; timeRange: string } | null;
 }
 
 type TimePeriod = '10min' | '1hour' | '24hours';
@@ -17,7 +19,7 @@ interface ChartDataPoint {
   status: 'up' | 'down' | 'timeout' | 'error' | 'skipped';
 }
 
-export default function ServerChartModal({ server, isOpen, onClose }: ServerChartModalProps) {
+export default function ServerChartModal({ server, isOpen, onClose, dateTimeFilter = null }: ServerChartModalProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1hour');
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(false);
@@ -82,8 +84,6 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
     setError(null);
     
     try {
-      const hours = selectedPeriod === '10min' ? 0.17 : selectedPeriod === '1hour' ? 1 : 24;
-      
       // Get authentication token
       const token = localStorage.getItem('token');
       const headers: Record<string, string> = {};
@@ -92,7 +92,42 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      const response = await fetch(`/api/servers/${server.id}/monitoring?hours=${hours}`, { headers });
+      let url = `/api/servers/${server.id}/monitoring`;
+      
+      // Use date/time filter if available, otherwise use period-based filter
+      if (dateTimeFilter) {
+        // Convert Persian date to Gregorian for API call
+        const persianDateParts = dateTimeFilter.date.split('/');
+        const persianYear = parseInt(persianDateParts[0]);
+        const persianMonth = parseInt(persianDateParts[1]);
+        const persianDay = parseInt(persianDateParts[2]);
+        
+        // Use accurate Persian to Gregorian conversion
+        const gregorianDate = persianToGregorian({
+          year: persianYear,
+          month: persianMonth,
+          day: persianDay
+        });
+        
+        // Parse time range
+        const timeRangeParts = dateTimeFilter.timeRange.split(' – ');
+        const startTime = timeRangeParts[0];
+        const endTime = timeRangeParts[1];
+        
+        // Create date range for filtering
+        const startDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+          parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0, 0);
+        const endDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+          parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 59, 999);
+        
+        url += `?start_datetime=${startDateTime.toISOString()}&end_datetime=${endDateTime.toISOString()}`;
+      } else {
+        // Use period-based filter with 6 hours as default
+        const hours = selectedPeriod === '10min' ? 0.17 : selectedPeriod === '1hour' ? 1 : 6;
+        url += `?hours=${hours}`;
+      }
+      
+      const response = await fetch(url, { headers });
       
       if (!response.ok) {
         throw new Error('Failed to fetch monitoring data');
@@ -104,12 +139,7 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
       const processedData = data
         .sort((a: any, b: any) => new Date(a.checked_at).getTime() - new Date(b.checked_at).getTime())
         .map((item: any) => ({
-          time: new Date(item.checked_at).toLocaleTimeString('fa-IR', { 
-            hour: '2-digit', 
-            minute: '2-digit',
-            second: '2-digit',
-            timeZone: 'Asia/Tehran'
-          }),
+          time: formatTableTime(item.checked_at),
           responseTime: item.response_time || 0,
           status: item.status
         }))
@@ -533,7 +563,7 @@ export default function ServerChartModal({ server, isOpen, onClose }: ServerChar
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-600">
-                  <span className="font-medium">آخرین بروزرسانی:</span> {new Date().toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' })}
+                  <span className="font-medium">آخرین بروزرسانی:</span> {formatTooltipTime(new Date())}
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${isRealTime ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>

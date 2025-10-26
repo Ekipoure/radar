@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { ServerWithStatus } from '@/lib/types';
+import { formatChartTime, persianToGregorian } from '@/lib/timezone';
 
 interface ServerInfoCardProps {
   server: ServerWithStatus;
   className?: string;
+  dateTimeFilter?: { date: string; timeRange: string } | null;
 }
 
 interface ServerStats {
@@ -35,7 +37,7 @@ const statusLabels = {
   unknown: 'نامشخص'
 };
 
-export default function ServerInfoCard({ server, className = '' }: ServerInfoCardProps) {
+export default function ServerInfoCard({ server, className = '', dateTimeFilter = null }: ServerInfoCardProps) {
   const [stats, setStats] = useState<ServerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -48,7 +50,41 @@ export default function ServerInfoCard({ server, className = '' }: ServerInfoCar
           setLoading(true);
         }
         
-        const response = await fetch(`/api/public/servers/${server.id}/monitoring?hours=24`);
+        let url = `/api/public/servers/${server.id}/monitoring`;
+        
+        // Use date/time filter if available, otherwise use default 6 hours
+        if (dateTimeFilter) {
+          // Convert Persian date to Gregorian for API call
+          const persianDateParts = dateTimeFilter.date.split('/');
+          const persianYear = parseInt(persianDateParts[0]);
+          const persianMonth = parseInt(persianDateParts[1]);
+          const persianDay = parseInt(persianDateParts[2]);
+          
+          // Use accurate Persian to Gregorian conversion
+          const gregorianDate = persianToGregorian({
+            year: persianYear,
+            month: persianMonth,
+            day: persianDay
+          });
+          
+          // Parse time range
+          const timeRangeParts = dateTimeFilter.timeRange.split(' – ');
+          const startTime = timeRangeParts[0];
+          const endTime = timeRangeParts[1];
+          
+          // Create date range for filtering
+          const startDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+            parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0, 0);
+          const endDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+            parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 59, 999);
+          
+          url += `?start_datetime=${startDateTime.toISOString()}&end_datetime=${endDateTime.toISOString()}`;
+        } else {
+          // Use default 6 hours
+          url += `?hours=6`;
+        }
+        
+        const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
           
@@ -70,13 +106,7 @@ export default function ServerInfoCard({ server, className = '' }: ServerInfoCar
           }, {});
 
           const lastCheckTime = data.length > 0 
-            ? new Date(data[0].checked_at).toLocaleString('fa-IR', {
-                timeZone: 'Asia/Tehran',
-                hour: '2-digit',
-                minute: '2-digit',
-                day: '2-digit',
-                month: '2-digit'
-              })
+            ? formatChartTime(data[0].checked_at)
             : 'نامشخص';
 
           setStats({
@@ -106,14 +136,48 @@ export default function ServerInfoCard({ server, className = '' }: ServerInfoCar
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [server.id]);
+  }, [server.id, dateTimeFilter]);
 
   // Force refresh when server data changes
   useEffect(() => {
     if (!isInitialLoad && stats) {
       const fetchStats = async () => {
         try {
-          const response = await fetch(`/api/public/servers/${server.id}/monitoring?hours=24`);
+          let url = `/api/public/servers/${server.id}/monitoring`;
+          
+          // Use date/time filter if available, otherwise use default 6 hours
+          if (dateTimeFilter) {
+            // Convert Persian date to Gregorian for API call
+            const persianDateParts = dateTimeFilter.date.split('/');
+            const persianYear = parseInt(persianDateParts[0]);
+            const persianMonth = parseInt(persianDateParts[1]);
+            const persianDay = parseInt(persianDateParts[2]);
+            
+            // Use accurate Persian to Gregorian conversion
+            const gregorianDate = persianToGregorian({
+              year: persianYear,
+              month: persianMonth,
+              day: persianDay
+            });
+            
+            // Parse time range
+            const timeRangeParts = dateTimeFilter.timeRange.split(' – ');
+            const startTime = timeRangeParts[0];
+            const endTime = timeRangeParts[1];
+            
+            // Create date range for filtering
+            const startDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+              parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0, 0);
+            const endDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+              parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 59, 999);
+            
+            url += `?start_datetime=${startDateTime.toISOString()}&end_datetime=${endDateTime.toISOString()}`;
+          } else {
+            // Use default 6 hours
+            url += `?hours=6`;
+          }
+          
+          const response = await fetch(url);
           if (response.ok) {
             const data = await response.json();
             
@@ -135,13 +199,7 @@ export default function ServerInfoCard({ server, className = '' }: ServerInfoCar
             }, {});
 
             const lastCheckTime = data.length > 0 
-              ? new Date(data[0].checked_at).toLocaleString('fa-IR', {
-                  timeZone: 'Asia/Tehran',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  day: '2-digit',
-                  month: '2-digit'
-                })
+              ? formatChartTime(data[0].checked_at)
               : 'نامشخص';
 
             setStats({
@@ -159,7 +217,7 @@ export default function ServerInfoCard({ server, className = '' }: ServerInfoCar
       
       fetchStats();
     }
-  }, [server.current_status, server.response_time, server.last_checked]);
+  }, [server.current_status, server.response_time, server.last_checked, dateTimeFilter]);
 
   if (loading) {
     return (

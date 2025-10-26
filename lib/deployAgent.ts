@@ -382,9 +382,9 @@ except Exception as e:
 
       // Detect operating system and install essential system dependencies
       this.log('Detecting operating system and installing essential dependencies...');
+      let osDetected = 'unknown';
       try {
         // Try to detect the OS
-        let osDetected = 'unknown';
         try {
           const osRelease = await this.executeSSHCommand(conn, `cat /etc/os-release | grep "^ID=" | cut -d'=' -f2 | tr -d '"'`);
           osDetected = osRelease.trim().toLowerCase();

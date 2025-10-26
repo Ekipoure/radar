@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { MonitoringData, ServerWithStatus } from '@/lib/types';
+import { formatChartTime, getIranTime, persianToGregorian } from '@/lib/timezone';
 
 interface ServerChartProps {
   server: ServerWithStatus;
   className?: string;
-  timeRange?: number;
+  dateTimeFilter?: { date: string; timeRange: string } | null;
 }
 
 interface ChartData {
@@ -34,7 +35,7 @@ const statusLabels = {
   unknown: 'نامشخص'
 };
 
-function ServerChart({ server, className = '', timeRange = 6 }: ServerChartProps) {
+function ServerChart({ server, className = '', dateTimeFilter = null }: ServerChartProps) {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [allChartData, setAllChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,10 +47,10 @@ function ServerChart({ server, className = '', timeRange = 6 }: ServerChartProps
   // Update current time every minute
   useEffect(() => {
     // Set initial time on client side only
-    setCurrentTime(new Date());
+    setCurrentTime(getIranTime());
     
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(getIranTime());
     }, 60000);
     return () => clearInterval(timer);
   }, []);
@@ -69,10 +70,46 @@ function ServerChart({ server, className = '', timeRange = 6 }: ServerChartProps
         setIsRefreshing(true);
       }
       
-      console.log(`Fetching monitoring data for server ${server.id} with ${timeRange} hours`);
+      console.log(`Fetching monitoring data for server ${server.id}`);
+      
+      let url = `/api/public/servers/${server.id}/monitoring`;
+      
+      // Use date/time filter - this is now required
+      if (dateTimeFilter) {
+        // Convert Persian date to Gregorian for API call
+        const persianDateParts = dateTimeFilter.date.split('/');
+        const persianYear = parseInt(persianDateParts[0]);
+        const persianMonth = parseInt(persianDateParts[1]);
+        const persianDay = parseInt(persianDateParts[2]);
+        
+        // Use accurate Persian to Gregorian conversion
+        const gregorianDate = persianToGregorian({
+          year: persianYear,
+          month: persianMonth,
+          day: persianDay
+        });
+        
+        // Parse time range
+        const timeRangeParts = dateTimeFilter.timeRange.split(' – ');
+        const startTime = timeRangeParts[0];
+        const endTime = timeRangeParts[1];
+        
+        // Create date range for filtering
+        const startDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+          parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]));
+        const endDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+          parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]));
+        
+        url += `?start_datetime=${startDateTime.toISOString()}&end_datetime=${endDateTime.toISOString()}`;
+        console.log(`Using date/time filter: ${startDateTime.toISOString()} to ${endDateTime.toISOString()}`);
+      } else {
+        // If no date/time filter is set, use default 6 hours (last 6 hours)
+        url += `?hours=6`;
+        console.log(`No date/time filter set, using default 6 hours (last 6 hours)`);
+      }
       
       // Use API endpoint instead of direct database access
-      const response = await fetch(`/api/public/servers/${server.id}/monitoring?hours=${timeRange}`);
+      const response = await fetch(url);
       console.log(`Response status: ${response.status}`);
       
       if (response.ok) {
@@ -82,13 +119,7 @@ function ServerChart({ server, className = '', timeRange = 6 }: ServerChartProps
         // Convert to chart data and sort by time
         const allData: ChartData[] = data
           .map((item: any) => ({
-            time: new Date(item.checked_at).toLocaleString('fa-IR', {
-              timeZone: 'Asia/Tehran',
-              hour: '2-digit',
-              minute: '2-digit',
-              day: '2-digit',
-              month: '2-digit'
-            }),
+            time: formatChartTime(item.checked_at),
             status: item.status,
             responseTime: item.response_time
           }))
@@ -120,7 +151,7 @@ function ServerChart({ server, className = '', timeRange = 6 }: ServerChartProps
         setIsRefreshing(false);
       }
     }
-  }, [server.id, timeRange, lastFetchTime]);
+  }, [server.id, dateTimeFilter, lastFetchTime]);
 
   useEffect(() => {
     // Initial load

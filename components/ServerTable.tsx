@@ -4,14 +4,16 @@ import { useState } from 'react';
 import { ServerWithStatus } from '@/lib/types';
 import EditServerModal from './EditServerModal';
 import ServerChartModal from './ServerChartModal';
+import { formatTableDate } from '@/lib/timezone';
 
 interface ServerTableProps {
   servers: ServerWithStatus[];
   onServerUpdated: () => void;
   onServerDeleted: () => void;
+  dateTimeFilter?: { date: string; timeRange: string } | null;
 }
 
-export default function ServerTable({ servers, onServerUpdated, onServerDeleted }: ServerTableProps) {
+export default function ServerTable({ servers, onServerUpdated, onServerDeleted, dateTimeFilter = null }: ServerTableProps) {
   const [editingServer, setEditingServer] = useState<ServerWithStatus | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [chartServer, setChartServer] = useState<ServerWithStatus | null>(null);
@@ -148,7 +150,7 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted 
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return date.toLocaleDateString('fa-IR', { timeZone: 'Asia/Tehran' });
+    return formatTableDate(date);
   };
 
   return (
@@ -294,6 +296,7 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted 
             setShowChartModal(false);
             setChartServer(null);
           }}
+          dateTimeFilter={dateTimeFilter}
         />
       )}
     </div>

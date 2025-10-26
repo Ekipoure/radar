@@ -15,9 +15,10 @@ import Header from './Header';
 
 interface DashboardProps {
   onLogout: () => void;
+  dateTimeFilter?: { date: string; timeRange: string } | null;
 }
 
-export default function Dashboard({ onLogout }: DashboardProps) {
+export default function Dashboard({ onLogout, dateTimeFilter = null }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [servers, setServers] = useState<ServerWithStatus[]>([]);
   const [deployedServers, setDeployedServers] = useState<DeployedServer[]>([]);
@@ -178,6 +179,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
               servers={servers}
               onServerUpdated={handleServerUpdated}
               onServerDeleted={handleServerDeleted}
+              dateTimeFilter={dateTimeFilter}
             />
           )}
           
