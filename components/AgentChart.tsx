@@ -78,15 +78,14 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
   // Apply server filter to chart data - memoized for performance
   const applyServerFilter = useCallback((data: ChartData[]) => {
     if (selectedServers.length === 0) {
-      // If no servers selected, show all disruptions
-      const allDisruptions = data.filter(item => item.status !== 'up');
-      setChartData(allDisruptions);
+      // If no servers selected, show all data
+      setChartData(data);
       return;
     }
     
-    // Filter by selected servers and show ALL disruptions (not just 'down' status)
+    // Filter by selected servers and show ALL data (up and down status)
     const filteredData = data.filter(item => 
-      item.serverId && selectedServers.includes(item.serverId) && item.status !== 'up'
+      item.serverId && selectedServers.includes(item.serverId)
     );
     setChartData(filteredData);
   }, [selectedServers]);
@@ -250,32 +249,32 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
 
   // Memoized computed values for better performance
   const statusCounts = useMemo(() => {
-    // Use allChartData for status counts to show all statuses in legend
-    return allChartData.reduce((acc, item) => {
+    // Use filtered chartData for status counts to show only selected servers
+    return chartData.reduce((acc, item) => {
       acc[item.status] = (acc[item.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-  }, [allChartData]);
+  }, [chartData]);
 
   const uptime = useMemo(() => {
-    if (allChartData.length === 0) return 0;
-    const upCount = allChartData.filter(item => item.status === 'up').length;
-    return Math.round((upCount / allChartData.length) * 100);
-  }, [allChartData]);
+    if (chartData.length === 0) return 0;
+    const upCount = chartData.filter(item => item.status === 'up').length;
+    return Math.round((upCount / chartData.length) * 100);
+  }, [chartData]);
 
   const disruptionCount = useMemo(() => {
-    return allChartData.filter(item => item.status !== 'up').length;
-  }, [allChartData]);
+    return chartData.filter(item => item.status !== 'up').length;
+  }, [chartData]);
 
   const avgResponseTime = useMemo(() => {
-    const responseTimes = allChartData
+    const responseTimes = chartData
       .filter(item => item.responseTime !== null && item.responseTime !== undefined && item.responseTime > 0 && item.status === 'up')
       .map(item => item.responseTime!);
     
     if (responseTimes.length === 0) return 0;
     const average = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
     return Math.round(average);
-  }, [allChartData]);
+  }, [chartData]);
 
   const maxResponseTime = useMemo(() => {
     if (chartData.length === 0) return 100;
