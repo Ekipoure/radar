@@ -47,6 +47,7 @@ export interface Agent {
   username: string;
   repo_url: string;
   location: 'internal' | 'external';
+  location_type?: 'internal' | 'external'; // Support for location_type column in database
   status: 'deployed' | 'deploying' | 'failed' | 'stopped';
   deployed_at: string;
   last_checked?: string;

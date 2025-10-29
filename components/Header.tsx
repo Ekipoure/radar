@@ -59,7 +59,7 @@ export default function Header({ onLogout, onAddServer, onDeploy, onAddAd, onAdd
                 </svg>
               </div>
               <h1 className="ml-3 text-xl font-semibold text-gray-900">
-                Radar Agent
+                Dashboard
               </h1>
             </div>
           </div>

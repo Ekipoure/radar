@@ -205,13 +205,14 @@ export async function getAgentsWithMonitoringData(hours: number = 24): Promise<a
         a.status as agent_status,
         a.deployed_at,
         a.last_checked as agent_last_checked,
+        COALESCE(a.location_type, a.location, 'internal') as location_type,
         COUNT(md.id) as monitoring_count,
         MAX(md.checked_at) as last_monitoring_check
       FROM agents a
       LEFT JOIN monitoring_data md ON md.source_ip::text LIKE a.server_ip::text || '%'
         AND md.checked_at >= NOW() - INTERVAL '${hours} hours'
       WHERE a.is_active = true
-      GROUP BY a.id, a.name, a.server_ip, a.status, a.deployed_at, a.last_checked
+      GROUP BY a.id, a.name, a.server_ip, a.status, a.deployed_at, a.last_checked, COALESCE(a.location_type, a.location, 'internal')
       ORDER BY a.name
     `);
     
@@ -283,13 +284,14 @@ export async function getAgentsWithMonitoringDataByDateRange(
         a.status as agent_status,
         a.deployed_at,
         a.last_checked as agent_last_checked,
+        COALESCE(a.location_type, a.location, 'internal') as location_type,
         COUNT(md.id) as monitoring_count,
         MAX(md.checked_at) as last_monitoring_check
       FROM agents a
       LEFT JOIN monitoring_data md ON md.source_ip::text LIKE a.server_ip::text || '%'
         AND md.checked_at >= $1 AND md.checked_at <= $2
       WHERE a.is_active = true
-      GROUP BY a.id, a.name, a.server_ip, a.status, a.deployed_at, a.last_checked
+      GROUP BY a.id, a.name, a.server_ip, a.status, a.deployed_at, a.last_checked, COALESCE(a.location_type, a.location, 'internal')
       ORDER BY a.name
     `, [startDateTime, endDateTime]);
     

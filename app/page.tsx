@@ -22,6 +22,9 @@ export default function Home() {
   // Global filter state
   const [globalSelectedServers, setGlobalSelectedServers] = useState<number[]>([]);
   
+  // Location filter state (internal/external)
+  const [locationFilter, setLocationFilter] = useState<'all' | 'internal' | 'external'>('all');
+  
   // Date/Time filter state
   const [isDateTimeFilterOpen, setIsDateTimeFilterOpen] = useState(false);
   const [dateTimeFilter, setDateTimeFilter] = useState<{ date: string; timeRange: string } | null>(null);
@@ -129,7 +132,13 @@ export default function Home() {
     }
   }, [agents.map(a => `${a.id}-${a.status}`).join(',')]);
 
-  const filteredAgents = agents;
+  // Filter agents based on location_type (supports both location_type and location fields)
+  const filteredAgents = locationFilter === 'all' 
+    ? agents 
+    : agents.filter(agent => {
+        const location = (agent as any).location_type || (agent as any).location;
+        return location === locationFilter;
+      });
 
   const getStats = () => {
     const activeAgents = agents.filter(a => a.status === 'deployed');
@@ -316,17 +325,44 @@ export default function Home() {
 
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setChartType('agents')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                chartType === 'agents'
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              چارت‌های ایجنت
-            </button>
+          <div className="flex gap-2 flex-wrap">
+            {/* Location Filter - Filter by internal/external for agents (servers) */}
+            <div className="flex items-center gap-2 bg-white rounded-lg px-2 border border-gray-200">
+              <span className="text-xs text-gray-600">فیلتر سرور:</span>
+              <button
+                onClick={() => setLocationFilter('all')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  locationFilter === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                همه
+              </button>
+              <button
+                onClick={() => setLocationFilter('internal')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  locationFilter === 'internal'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                داخلی
+              </button>
+              <button
+                onClick={() => setLocationFilter('external')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  locationFilter === 'external'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                خارجی
+              </button>
+              <span className="text-xs text-gray-500 mr-2">
+                ({filteredAgents.length} سرور)
+              </span>
+            </div>
             
             {/* Date/Time Filter Button */}
             <button

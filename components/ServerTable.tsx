@@ -20,6 +20,7 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
   const [chartServer, setChartServer] = useState<ServerWithStatus | null>(null);
   const [showChartModal, setShowChartModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [serverGroupFilter, setServerGroupFilter] = useState<'all' | 'iranian' | 'global'>('all');
 
   const getStatusBadge = (status?: string) => {
     switch (status) {
@@ -155,6 +156,11 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
     return formatTableDate(date);
   };
 
+  // Filter servers based on server_group filter
+  const filteredServers = serverGroupFilter === 'all' 
+    ? servers 
+    : servers.filter(server => server.server_group === serverGroupFilter);
+
   return (
     <div className="card">
       <div className="px-4 py-5 sm:p-6">
@@ -168,6 +174,46 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
           >
             افزودن سرور جدید
           </button>
+        </div>
+
+        {/* Server Group Filter */}
+        <div className="mb-4 flex items-center gap-3" dir="rtl">
+          <span className="text-sm font-medium text-gray-700">فیلتر نوع سرور:</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setServerGroupFilter('all')}
+              className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                serverGroupFilter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              همه
+            </button>
+            <button
+              onClick={() => setServerGroupFilter('iranian')}
+              className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                serverGroupFilter === 'iranian'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              داخلی
+            </button>
+            <button
+              onClick={() => setServerGroupFilter('global')}
+              className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                serverGroupFilter === 'global'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              خارجی
+            </button>
+          </div>
+          <span className="text-sm text-gray-500">
+            ({filteredServers.length} سرور)
+          </span>
         </div>
         
         <div className="overflow-x-auto -mx-4 sm:mx-0" dir="ltr">
@@ -198,7 +244,14 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200" dir="ltr">
-              {servers.map((server) => (
+              {filteredServers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    هیچ سروری با فیلتر انتخابی یافت نشد
+                  </td>
+                </tr>
+              ) : (
+                filteredServers.map((server) => (
                 <tr key={server.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleShowChart(server)}>
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -281,7 +334,8 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
