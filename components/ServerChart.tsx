@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { MonitoringData, ServerWithStatus } from '@/lib/types';
 import { formatChartTime, getIranTime, persianToGregorian } from '@/lib/timezone';
 
@@ -38,11 +38,9 @@ const statusLabels = {
 function ServerChart({ server, className = '', dateTimeFilter = null }: ServerChartProps) {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [allChartData, setAllChartData] = useState<ChartData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const allChartDataRef = useRef<ChartData[]>([]);
 
   // Update current time every minute
   useEffect(() => {
@@ -63,13 +61,6 @@ function ServerChart({ server, className = '', dateTimeFilter = null }: ServerCh
     }
     
     try {
-      // Only show loading on initial load, not on refreshes
-      if (!isRefresh) {
-        setLoading(true);
-      } else {
-        setIsRefreshing(true);
-      }
-      
       console.log(`Fetching monitoring data for server ${server.id}`);
       
       let url = `/api/public/servers/${server.id}/monitoring`;
@@ -125,16 +116,20 @@ function ServerChart({ server, className = '', dateTimeFilter = null }: ServerCh
           }))
           .sort((a: ChartData, b: ChartData) => new Date(a.time).getTime() - new Date(b.time).getTime());
         
-        // Filter to only show disruptions (down status) for candles
-        const filteredData = allData.filter(item => item.status === 'down');
+        // Filter to only show disruptions (down, timeout, error status) for candles
+        const filteredData = allData.filter(item => 
+          ['down', 'timeout', 'error'].includes(item.status)
+        );
         
         console.log(`Processed chart data:`, filteredData);
         
         // Only update if data has actually changed to prevent jumping
-        const dataChanged = JSON.stringify(allData) !== JSON.stringify(allChartData);
+        const dataChanged = JSON.stringify(allData) !== JSON.stringify(allChartDataRef.current);
         if (dataChanged) {
+          // Update state smoothly without causing jumps
           setAllChartData(allData);
           setChartData(filteredData);
+          allChartDataRef.current = allData;
           setLastFetchTime(now);
         }
       } else {
@@ -143,24 +138,22 @@ function ServerChart({ server, className = '', dateTimeFilter = null }: ServerCh
       }
     } catch (error) {
       console.error('Error fetching chart data:', error);
-    } finally {
-      if (!isRefresh) {
-        setLoading(false);
-        setIsInitialLoad(false);
-      } else {
-        setIsRefreshing(false);
-      }
     }
   }, [server.id, dateTimeFilter, lastFetchTime]);
+
+  useEffect(() => {
+    // Initialize ref
+    allChartDataRef.current = allChartData;
+  }, [allChartData]);
 
   useEffect(() => {
     // Initial load
     fetchChartData();
     
-    // Auto-refresh every 30 seconds (balanced frequency)
+    // Auto-refresh every 1 minute (balanced frequency)
     const interval = setInterval(() => {
       fetchChartData(true);
-    }, 30000);
+    }, 60000);
     
     return () => clearInterval(interval);
   }, [fetchChartData]);
@@ -251,28 +244,24 @@ function ServerChart({ server, className = '', dateTimeFilter = null }: ServerCh
         </div>
         <div className="bg-gray-50 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-gray-900">{chartData.length}</div>
-          <div className="text-xs text-gray-600">تعداد چک</div>
+          <div className="text-xs text-gray-600">تعداد اختلال</div>
         </div>
       </div>
 
       {/* Chart */}
-      <div className="relative">
-        {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          </div>
-        ) : chartData.length === 0 ? (
+      <div className="relative min-h-[120px]">
+        {chartData.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-gray-500">
             داده‌ای برای نمایش وجود ندارد
           </div>
         ) : (
-          <div className="space-y-2 transition-all duration-300 ease-in-out">
+          <div className="space-y-2">
             {/* Chart Bars - Only show disruptions (down status) with server color */}
             <div className="flex items-end gap-1 h-20">
               {chartData.map((item, index) => (
                 <div
-                  key={`${item.time}-${index}`}
-                  className="flex-1 rounded-t transition-all duration-500 ease-in-out"
+                  key={`${server.id}-${item.time}-${index}`}
+                  className="flex-1 rounded-t"
                   style={{
                     height: `${getBarHeight(item.responseTime || 0)}px`,
                     backgroundColor: server.color, // Use server color for disruptions

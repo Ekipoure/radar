@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     let config: DeployConfig;
     let agentName: string;
     let repoUrl: string = '';
+    let location: string = 'internal';
 
     if (contentType.includes('multipart/form-data')) {
       // Handle file upload
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
       const targetPath = formData.get('targetPath') as string;
       const usePM2 = formData.get('usePM2') === 'true';
       const deploymentMode = formData.get('deploymentMode') as string;
+      location = (formData.get('location') as string) || 'internal';
       const file = formData.get('file') as File;
 
       // Validate required fields
@@ -118,6 +120,7 @@ export async function POST(request: NextRequest) {
       const targetPath = body.targetPath;
       const usePM2 = body.usePM2;
       const deploymentMode = body.deploymentMode || 'git';
+      location = body.location || 'internal';
 
       // Validate required fields
       if (!serverIp || !username || !password || !repoUrl || !agentName) {
@@ -206,14 +209,15 @@ export async function POST(request: NextRequest) {
         
         try {
           const agentResult = await client.query(`
-            INSERT INTO agents (name, server_ip, username, repo_url, port, status, is_active)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO agents (name, server_ip, username, repo_url, location_type, port, status, is_active)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
           `, [
             agentName,
             config.serverIp,
             config.username,
             repoUrl,
+            location,
             3000, // Default port
             'deployed',
             true

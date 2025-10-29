@@ -48,7 +48,7 @@ export function persianToGregorian(persianDate: PersianDate): Date {
     return new Date(); // Return current date as fallback
   }
   
-  // For 1403 (current year), use a simple calculation
+  // For 1403 and 1404 (current years), use a simple calculation
   if (year === 1403) {
     // Reference: 1403/01/01 = 2024-03-20
     const referenceDate = new Date(2024, 2, 20); // March 20, 2024
@@ -57,15 +57,49 @@ export function persianToGregorian(persianDate: PersianDate): Date {
     const monthDays = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29]; // 1403 is not a leap year
     let daysFromStart = 0;
     
+    // Add days from complete months that have passed
     for (let m = 0; m < month - 1; m++) {
       daysFromStart += monthDays[m];
     }
-    daysFromStart += day + 1;
+    // Add days from current month (day 1 = 1 day has passed, not 0)
+    daysFromStart += day - 1;
+    
+    // Add 1 more day to match the actual Persian calendar alignment
+    daysFromStart += 1;
     
     const result = new Date(referenceDate.getTime() + daysFromStart * 24 * 60 * 60 * 1000);
     
     if (isNaN(result.getTime())) {
       console.error('Invalid date conversion for 1403:', persianDate);
+      return new Date();
+    }
+    
+    return result;
+  }
+  
+  // For 1404
+  if (year === 1404) {
+    // Reference: 1404/01/01 = 2025-03-20
+    const referenceDate = new Date(2025, 2, 20); // March 20, 2025
+    
+    // Calculate days from start of year
+    const monthDays = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29]; // 1404 is not a leap year
+    let daysFromStart = 0;
+    
+    // Add days from complete months that have passed
+    for (let m = 0; m < month - 1; m++) {
+      daysFromStart += monthDays[m];
+    }
+    // Add days from current month (day 1 = 1 day has passed, not 0)
+    daysFromStart += day - 1;
+    
+    // Add 1 more day to match the actual Persian calendar alignment
+    daysFromStart += 1;
+    
+    const result = new Date(referenceDate.getTime() + daysFromStart * 24 * 60 * 60 * 1000);
+    
+    if (isNaN(result.getTime())) {
+      console.error('Invalid date conversion for 1404:', persianDate);
       return new Date();
     }
     
@@ -145,7 +179,16 @@ export function persianToGregorian(persianDate: PersianDate): Date {
  * Persian leap year calculation: follows the 33-year cycle
  */
 function isPersianLeapYear(year: number): boolean {
-  // 33-year cycle: years 1, 5, 9, 13, 17, 22, 26, 30 are leap years
+  // Persian leap year calculation: follows the 33-year cycle
+  // For years 1400+, we need to adjust the cycle calculation
+  if (year >= 1400) {
+    // Adjust for modern Persian calendar
+    const adjustedYear = year - 1400;
+    const cycle = adjustedYear % 33;
+    return [1, 5, 9, 13, 17, 22, 26, 30].includes(cycle);
+  }
+  
+  // Original calculation for older years
   const cycle = year % 33;
   return [1, 5, 9, 13, 17, 22, 26, 30].includes(cycle);
 }

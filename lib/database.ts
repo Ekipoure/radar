@@ -152,6 +152,7 @@ export async function initializeDatabase() {
         server_ip VARCHAR(45) NOT NULL,
         username VARCHAR(100) NOT NULL,
         repo_url VARCHAR(500) NOT NULL,
+        location VARCHAR(20) NOT NULL DEFAULT 'internal' CHECK (location IN ('internal', 'external')),
         status VARCHAR(20) NOT NULL DEFAULT 'deployed' CHECK (status IN ('deployed', 'deploying', 'failed', 'stopped')),
         deployed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_checked TIMESTAMP,
@@ -161,6 +162,76 @@ export async function initializeDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add location column to existing agents table if it doesn't exist
+    // First check if location column exists
+    const locationColumnExists = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'agents' AND column_name = 'location'
+    `);
+
+    if (locationColumnExists.rows.length === 0) {
+      // Check if location_type column exists (old column name)
+      const locationTypeColumnExists = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'agents' AND column_name = 'location_type'
+      `);
+
+      // Add location column
+      await client.query(`
+        ALTER TABLE agents 
+        ADD COLUMN location VARCHAR(20) DEFAULT 'internal'
+      `);
+
+      // If location_type exists, copy data from it to location
+      if (locationTypeColumnExists.rows.length > 0) {
+        await client.query(`
+          UPDATE agents 
+          SET location = location_type 
+          WHERE location = 'internal' AND location_type IS NOT NULL
+        `);
+      }
+
+      // Add constraint to location column if it doesn't exist
+      try {
+        const constraintExists = await client.query(`
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE constraint_name = 'agents_location_check' 
+          AND table_name = 'agents'
+        `);
+        
+        if (constraintExists.rows.length === 0) {
+          await client.query(`
+            ALTER TABLE agents 
+            ADD CONSTRAINT agents_location_check 
+            CHECK (location IN ('internal', 'external'))
+          `);
+        }
+      } catch (error) {
+        console.log('Warning: Could not add location constraint:', error instanceof Error ? error.message : 'Unknown error');
+      }
+    } else {
+      // Location column exists, but check if constraint exists
+      try {
+        const constraintExists = await client.query(`
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE constraint_name = 'agents_location_check' 
+          AND table_name = 'agents'
+        `);
+        
+        if (constraintExists.rows.length === 0) {
+          await client.query(`
+            ALTER TABLE agents 
+            ADD CONSTRAINT agents_location_check 
+            CHECK (location IN ('internal', 'external'))
+          `);
+        }
+      } catch (error) {
+        console.log('Warning: Could not add location constraint:', error instanceof Error ? error.message : 'Unknown error');
+      }
+    }
 
     // Create deployed_servers table (keeping for backward compatibility)
     await client.query(`

@@ -46,6 +46,7 @@ export interface Agent {
   server_ip: string;
   username: string;
   repo_url: string;
+  location: 'internal' | 'external';
   status: 'deployed' | 'deploying' | 'failed' | 'stopped';
   deployed_at: string;
   last_checked?: string;
@@ -83,26 +84,12 @@ export interface UpdateServerData extends Partial<CreateServerData> {
   is_active?: boolean;
 }
 
-export interface Agent {
-  id: number;
-  name: string;
-  server_ip: string;
-  username: string;
-  repo_url: string;
-  status: 'deployed' | 'deploying' | 'failed' | 'stopped';
-  deployed_at: string;
-  last_checked?: string;
-  port: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface CreateAgentData {
   name: string;
   server_ip: string;
   username: string;
   repo_url: string;
+  location?: 'internal' | 'external';
   port?: number;
 }
 

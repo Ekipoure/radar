@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ServerWithStatus } from '@/lib/types';
 import EditServerModal from './EditServerModal';
 import ServerChartModal from './ServerChartModal';
+import AddServerModal from './AddServerModal';
 import { formatTableDate } from '@/lib/timezone';
 
 interface ServerTableProps {
@@ -18,6 +19,7 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
   const [showEditModal, setShowEditModal] = useState(false);
   const [chartServer, setChartServer] = useState<ServerWithStatus | null>(null);
   const [showChartModal, setShowChartModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const getStatusBadge = (status?: string) => {
     switch (status) {
@@ -156,9 +158,17 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
   return (
     <div className="card">
       <div className="px-4 py-5 sm:p-6">
-        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-          Server Status
-        </h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            Server Status
+          </h3>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            افزودن سرور جدید
+          </button>
+        </div>
         
         <div className="overflow-x-auto -mx-4 sm:mx-0" dir="ltr">
           <table className="min-w-full divide-y divide-gray-200 table-ltr" style={{ minWidth: '800px' }} dir="ltr">
@@ -297,6 +307,16 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
             setChartServer(null);
           }}
           dateTimeFilter={dateTimeFilter}
+        />
+      )}
+
+      {showAddModal && (
+        <AddServerModal
+          onClose={() => setShowAddModal(false)}
+          onServerAdded={() => {
+            setShowAddModal(false);
+            onServerUpdated();
+          }}
         />
       )}
     </div>

@@ -18,6 +18,7 @@ interface DeployConfig {
   targetPath: string;
   usePM2: boolean;
   deploymentMode: 'git' | 'upload';
+  location: 'internal' | 'external';
   uploadedFile?: File;
 }
 
@@ -38,7 +39,8 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
     envContent: '',
     targetPath: '/var/www/project',
     usePM2: true,
-    deploymentMode: 'git'
+    deploymentMode: 'git',
+    location: 'internal'
   });
 
   const [isDeploying, setIsDeploying] = useState(false);
@@ -122,6 +124,7 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
         formData.append('targetPath', config.targetPath);
         formData.append('usePM2', config.usePM2.toString());
         formData.append('deploymentMode', config.deploymentMode);
+        formData.append('location', config.location);
         formData.append('file', config.uploadedFile);
 
         response = await fetch('/api/deploy', {
@@ -140,7 +143,8 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
           headers,
           body: JSON.stringify({
             ...config,
-            deploymentMode: config.deploymentMode
+            deploymentMode: config.deploymentMode,
+            location: config.location
           }),
         });
       }
@@ -175,7 +179,8 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
       envContent: '',
       targetPath: '/var/www/project',
       usePM2: true,
-      deploymentMode: 'git'
+      deploymentMode: 'git',
+      location: 'internal'
     });
     setDeployResult(null);
     setShowLogs(false);
@@ -234,6 +239,61 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
                 placeholder="192.168.1.100 or your-server.com"
                 disabled={isDeploying}
               />
+            </div>
+
+            {/* Location Selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Server Location
+              </label>
+              <div className="relative">
+                <div className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('location', 'internal')}
+                    disabled={isDeploying}
+                    className={`
+                      px-4 py-2 text-sm font-medium transition-all duration-200
+                      ${config.location === 'internal' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-white text-gray-700 hover:bg-gray-50'}
+                      ${isDeploying ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
+                  >
+                    <span className="flex items-center">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      Internal
+                    </span>
+                  </button>
+                  <div className="w-px bg-gray-300"></div>
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('location', 'external')}
+                    disabled={isDeploying}
+                    className={`
+                      px-4 py-2 text-sm font-medium transition-all duration-200
+                      ${config.location === 'external' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-white text-gray-700 hover:bg-gray-50'}
+                      ${isDeploying ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
+                  >
+                    <span className="flex items-center">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002 2h2.945M3 11v6a2 2 0 002 2h14a2 2 0 002-2v-4.5a1 1 0 00-1-1h-5.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0013.172 9H11a2 2 0 00-2 2v.5M21 21V5a2 2 0 00-2-2H5a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      External
+                    </span>
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {config.location === 'internal' 
+                    ? 'Server located within your internal network' 
+                    : 'Server located outside your network (e.g., cloud, external hosting)'}
+                </p>
+              </div>
             </div>
 
             <div>

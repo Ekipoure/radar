@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Agent } from '@/lib/types';
+import AddAgentModal from './AddAgentModal';
 import { formatTableDate, formatHeaderTime } from '@/lib/timezone';
 
 interface AgentTableProps {
@@ -17,6 +18,7 @@ export default function AgentTable({
 }: AgentTableProps) {
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // Lock body scroll when edit modal is open
   useEffect(() => {
@@ -120,9 +122,17 @@ export default function AgentTable({
   return (
     <div className="card">
       <div className="px-4 py-5 sm:p-6">
-        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-          Agents
-        </h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            Agents
+          </h3>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            افزودن ایجنت جدید
+          </button>
+        </div>
         
         <div className="overflow-x-auto -mx-4 sm:mx-0" dir="ltr">
           <table className="min-w-full divide-y divide-gray-200 table-ltr" style={{ minWidth: '800px' }} dir="ltr">
@@ -256,6 +266,16 @@ export default function AgentTable({
             </div>
           </div>
         </div>
+      )}
+
+      {showAddModal && (
+        <AddAgentModal
+          onClose={() => setShowAddModal(false)}
+          onAgentAdded={() => {
+            setShowAddModal(false);
+            onAgentUpdated();
+          }}
+        />
       )}
     </div>
   );

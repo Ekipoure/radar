@@ -46,7 +46,7 @@ export default function PerformanceMonitor() {
 
   useEffect(() => {
     fetchPerformanceData();
-    const interval = setInterval(fetchPerformanceData, 10000); // Update every 10 seconds
+    const interval = setInterval(fetchPerformanceData, 60000); // Update every 1 minute
     return () => clearInterval(interval);
   }, []);
 

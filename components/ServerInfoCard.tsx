@@ -130,10 +130,10 @@ export default function ServerInfoCard({ server, className = '', dateTimeFilter 
     // Initial load
     fetchStats();
     
-    // Auto-refresh every 30 seconds (silent)
+    // Auto-refresh every 1 minute (silent)
     const interval = setInterval(() => {
       fetchStats(true);
-    }, 30000);
+    }, 60000);
     
     return () => clearInterval(interval);
   }, [server.id, dateTimeFilter]);

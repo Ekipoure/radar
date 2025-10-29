@@ -155,8 +155,7 @@ export async function getMonitoringDataBySource(
          FROM monitoring_data md
          JOIN servers s ON md.server_id = s.id
          WHERE md.source_ip = $1 AND md.checked_at >= NOW() - INTERVAL '${hours} hours'
-         ORDER BY md.checked_at DESC
-         LIMIT 200`,
+         ORDER BY md.checked_at DESC`,
         [sourceIp]
       );
       return result.rows;
@@ -184,8 +183,7 @@ export async function getMonitoringDataBySourceWithDateRange(
          WHERE md.source_ip = $1 
          AND md.checked_at >= $2 
          AND md.checked_at <= $3
-         ORDER BY md.checked_at DESC
-         LIMIT 200`,
+         ORDER BY md.checked_at DESC`,
         [sourceIp, startDateTime, endDateTime]
       );
       return result.rows;
@@ -254,6 +252,7 @@ export async function getAgentsWithMonitoringData(hours: number = 24): Promise<a
       
       agents.push({
         ...agent,
+        is_active: true, // Always true since we filter by WHERE a.is_active = true
         current_status: currentStatus,
         success_count: recentData.filter(r => r.status === 'up').length,
         failed_count: recentData.filter(r => 
@@ -332,6 +331,7 @@ export async function getAgentsWithMonitoringDataByDateRange(
       
       agents.push({
         ...agent,
+        is_active: true, // Always true since we filter by WHERE a.is_active = true
         current_status: currentStatus,
         success_count: recentData.filter(r => r.status === 'up').length,
         failed_count: recentData.filter(r => 
@@ -469,7 +469,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
           COUNT(CASE WHEN status = 'timeout' THEN 1 END) as timeout_count,
           COUNT(CASE WHEN status = 'error' THEN 1 END) as error_count
         FROM monitoring_data 
-        WHERE checked_at >= NOW() - INTERVAL '24 hours'
+        WHERE checked_at >= NOW() - INTERVAL '6 hours'
       )
       SELECT 
         sc.total_servers,

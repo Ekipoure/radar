@@ -61,14 +61,15 @@ export async function POST(request: NextRequest) {
     
     try {
       const result = await client.query(`
-        INSERT INTO agents (name, server_ip, username, repo_url, port, status, is_active)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO agents (name, server_ip, username, repo_url, location, port, status, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
       `, [
         agentData.name,
         agentData.server_ip,
         agentData.username,
         agentData.repo_url,
+        agentData.location || 'internal',
         agentData.port || 3000,
         'deployed',
         true

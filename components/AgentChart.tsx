@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { MonitoringData } from '@/lib/types';
 import { formatChartTime, getIranTime, persianToGregorian } from '@/lib/timezone';
 
@@ -13,7 +13,8 @@ interface AgentChartProps {
     deployed_at: string;
     last_checked?: string;
     port: number;
-    is_active: boolean;
+    is_active?: boolean;
+    current_status?: string;
     created_at: string;
     updated_at: string;
   };
@@ -57,13 +58,12 @@ const statusLabels = {
 function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilter = null }: AgentChartProps) {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [allChartData, setAllChartData] = useState<ChartData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<ChartData | null>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+  const [globalDisruptionCount, setGlobalDisruptionCount] = useState<number>(0);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const allChartDataRef = useRef<ChartData[]>([]);
 
   // Update current time every minute
   useEffect(() => {
@@ -75,19 +75,36 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
     return () => clearInterval(timer);
   }, []);
 
+  // Fetch global disruption count from dashboard stats
+  const fetchGlobalDisruptionCount = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : undefined;
+      
+      const response = await fetch('/api/dashboard/stats', { headers });
+      if (response.ok) {
+        const data = await response.json();
+        const globalCount = data.stats.downCount + data.stats.timeoutCount + data.stats.errorCount;
+        setGlobalDisruptionCount(globalCount);
+      }
+    } catch (error) {
+      console.error('Error fetching global disruption count:', error);
+    }
+  }, []);
+
   // Apply server filter to chart data - memoized for performance
-  const applyServerFilter = useCallback((data: ChartData[]) => {
+  const applyServerFilter = useCallback((allData: ChartData[], disruptionsData: ChartData[]) => {
     if (selectedServers.length === 0) {
-      // If no servers selected, show all data
-      setChartData(data);
+      // If no servers selected, show all disruptions
+      setChartData(disruptionsData);
       return;
     }
     
-    // Filter by selected servers and show ALL data (up and down status)
-    const filteredData = data.filter(item => 
+    // Filter disruptions by selected servers
+    const filteredDisruptions = disruptionsData.filter(item => 
       item.serverId && selectedServers.includes(item.serverId)
     );
-    setChartData(filteredData);
+    setChartData(filteredDisruptions);
   }, [selectedServers]);
 
   const fetchChartData = useCallback(async (isRefresh = false) => {
@@ -98,12 +115,6 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
     }
     
     try {
-      if (!isRefresh) {
-        setLoading(true);
-      } else {
-        setIsRefreshing(true);
-      }
-      
       console.log(`Fetching monitoring data for agent ${agent.name} (${agent.server_ip})`);
       
       let url = `/api/agents/monitoring?source_ip=${agent.server_ip}`;
@@ -129,40 +140,87 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
           console.log('Gregorian conversion result:', gregorianDate);
           console.log('Is valid date:', !isNaN(gregorianDate.getTime()));
           
-          // Parse time range first
-          const timeRangeParts = dateTimeFilter.timeRange.split(' – ');
-          const startTime = timeRangeParts[0];
-          const endTime = timeRangeParts[1];
+          // Parse time range first - handle both Persian and English dash characters
+          const timeRangeParts = dateTimeFilter.timeRange.split(/[–-]/);
+          const startTime = timeRangeParts[0].trim();
+          const endTime = timeRangeParts[1].trim();
           
           // Check if conversion was successful
           if (isNaN(gregorianDate.getTime())) {
             console.error('Failed to convert Persian date to Gregorian, using current date');
             const currentDate = new Date();
+            // Convert Persian digits to English digits for parsing
+            const startTimeEn = startTime.replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+            const endTimeEn = endTime.replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+            
             const startDateTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 
-              parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0, 0);
+              parseInt(startTimeEn.split(':')[0]), parseInt(startTimeEn.split(':')[1]), 0, 0);
             const endDateTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 
-              parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 59, 999);
+              parseInt(endTimeEn.split(':')[0]), parseInt(endTimeEn.split(':')[1]), 59, 999);
             
             url += `&start_datetime=${startDateTime.toISOString()}&end_datetime=${endDateTime.toISOString()}`;
             console.log(`Using fallback current date filter: ${startDateTime.toISOString()} to ${endDateTime.toISOString()}`);
           } else {
-            // Create date range for filtering - use local timezone
-            const startDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
-              parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0, 0);
-            const endDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
-              parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 59, 999);
+            // Create date range for filtering - use Iran timezone
+            // Convert Persian digits to English digits for parsing
+            const startTimeEn = startTime.replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+            const endTimeEn = endTime.replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
             
-            // Validate dates before using toISOString
-            if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-              console.error('Invalid date range created:', { startDateTime, endDateTime, gregorianDate });
-              throw new Error('Invalid date range');
+            // Parse time components
+            const [startHour, startMinute] = startTimeEn.split(':').map(Number);
+            const [endHour, endMinute] = endTimeEn.split(':').map(Number);
+            
+            console.log('Parsed time components:', { startHour, startMinute, endHour, endMinute });
+            console.log('Gregorian date from conversion:', gregorianDate.toDateString());
+            
+            // Validate gregorianDate before using
+            let startDateTime: Date;
+            let endDateTime: Date;
+            
+            if (isNaN(gregorianDate.getTime())) {
+              console.error('Invalid gregorianDate, using current date:', gregorianDate);
+              const currentDate = new Date();
+              // Create date in Iran timezone by using local date components
+              startDateTime = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate(), 
+                startHour - 3.5, startMinute, 0, 0)); // Iran is UTC+3:30
+              endDateTime = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate(), 
+                endHour - 3.5, endMinute, 59, 999));
+              console.log(`Using current date filter: ${startDateTime.toISOString()} to ${endDateTime.toISOString()}`);
+            } else {
+              // Create dates by manually constructing the date string
+              const year = gregorianDate.getFullYear();
+              const month = String(gregorianDate.getMonth() + 1).padStart(2, '0');
+              const day = String(gregorianDate.getDate()).padStart(2, '0');
+              const startHourStr = String(startHour).padStart(2, '0');
+              const startMinStr = String(startMinute).padStart(2, '0');
+              const endHourStr = String(endHour).padStart(2, '0');
+              const endMinStr = String(endMinute).padStart(2, '0');
+              
+              // Create date string in ISO format - PostgreSQL will interpret this correctly
+              const dateStr = `${year}-${month}-${day}`;
+              const startTimeStr = `${startHourStr}:${startMinStr}:00`;
+              const endTimeStr = `${endHourStr}:${endMinStr}:59`;
+              
+              // Create date objects using local time (assuming server timezone matches Iran timezone)
+              startDateTime = new Date(`${dateStr}T${startTimeStr}`);
+              endDateTime = new Date(`${dateStr}T${endTimeStr}`);
+              
+              console.log(`Created date strings: ${dateStr}T${startTimeStr} to ${dateStr}T${endTimeStr}`);
+              console.log(`Full date objects: ${startDateTime.toString()} to ${endDateTime.toString()}`);
+              
+              // Validate dates
+              if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+                console.error('Invalid date range created:', { startDateTime, endDateTime, gregorianDate });
+                throw new Error('Invalid date range');
+              }
+              console.log(`Using date/time filter: ${startDateTime.toISOString()} to ${endDateTime.toISOString()}`);
             }
             
             url += `&start_datetime=${startDateTime.toISOString()}&end_datetime=${endDateTime.toISOString()}`;
-            console.log(`Using date/time filter: ${startDateTime.toISOString()} to ${endDateTime.toISOString()}`);
             console.log(`Original Persian date: ${dateTimeFilter.date}, Time range: ${dateTimeFilter.timeRange}`);
             console.log(`Converted Gregorian date: ${gregorianDate.toDateString()}`);
             console.log(`Start time: ${startTime}, End time: ${endTime}`);
+            console.log(`Full URL: ${url}`);
           }
         } catch (error) {
           console.error('Error processing date/time filter:', error);
@@ -182,7 +240,7 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
         const data = await response.json();
         console.log(`Received ${data.monitoringData.length} monitoring records for agent ${agent.name}:`, data);
         
-        // Convert to chart data, show ALL data (not just disruptions), and sort by time
+        // Convert to chart data and sort by time
         const allData: ChartData[] = data.monitoringData
           .map((item: any) => ({
             time: formatChartTime(item.checked_at),
@@ -195,18 +253,25 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
           }))
           .sort((a: ChartData, b: ChartData) => new Date(a.time).getTime() - new Date(b.time).getTime());
         
-        console.log(`Processed chart data:`, allData);
+        // Filter to only show disruptions (down, timeout, error status) for candles
+        const filteredData = allData.filter(item => 
+          ['down', 'timeout', 'error'].includes(item.status)
+        );
+        
+        console.log(`Processed chart data:`, filteredData);
         console.log(`Date/time filter applied:`, dateTimeFilter ? 'Yes' : 'No');
-        console.log(`Total records found: ${allData.length}`);
+        console.log(`Total records found: ${allData.length}, Disruptions: ${filteredData.length}`);
         
         // Only update if data has actually changed to prevent jumping
-        const dataChanged = JSON.stringify(allData) !== JSON.stringify(allChartData);
+        const dataChanged = JSON.stringify(allData) !== JSON.stringify(allChartDataRef.current);
         if (dataChanged) {
+          // Update state smoothly without causing jumps
           setAllChartData(allData);
+          allChartDataRef.current = allData;
           setLastFetchTime(now);
           
-          // Apply server filter
-          applyServerFilter(allData);
+          // Apply server filter to disruptions
+          applyServerFilter(allData, filteredData);
         } else {
           console.log('Data unchanged, skipping update to prevent jumping');
         }
@@ -217,64 +282,99 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
       }
     } catch (error) {
       console.error('Error fetching chart data:', error);
-    } finally {
-      if (!isRefresh) {
-        setLoading(false);
-        setIsInitialLoad(false);
-      } else {
-        setIsRefreshing(false);
-      }
     }
   }, [agent.name, agent.server_ip, dateTimeFilter, applyServerFilter, lastFetchTime]);
 
   useEffect(() => {
+    // Initialize ref
+    allChartDataRef.current = allChartData;
+  }, [allChartData]);
+
+  useEffect(() => {
     // Initial load
     fetchChartData();
+    fetchGlobalDisruptionCount();
     
-    // Auto-refresh every 30 seconds (balanced frequency)
+    // Auto-refresh every 1 minute (balanced frequency)
     const interval = setInterval(() => {
       fetchChartData(true);
-    }, 30000);
+      fetchGlobalDisruptionCount();
+    }, 60000);
     
     return () => clearInterval(interval);
-  }, [fetchChartData]);
+  }, [fetchChartData, fetchGlobalDisruptionCount]);
 
   // Apply filter when selected servers change
   useEffect(() => {
     if (allChartData.length > 0) {
-      applyServerFilter(allChartData);
+      // Re-filter disruptions based on current allChartData
+      const disruptionsData = allChartData.filter(item => 
+        ['down', 'timeout', 'error'].includes(item.status)
+      );
+      applyServerFilter(allChartData, disruptionsData);
     }
-  }, [selectedServers, allChartData]);
+  }, [selectedServers, allChartData, applyServerFilter]);
 
 
   // Memoized computed values for better performance
   const statusCounts = useMemo(() => {
-    // Use filtered chartData for status counts to show only selected servers
-    return chartData.reduce((acc, item) => {
+    // Use allChartData for status counts to show all statuses in legend
+    return allChartData.reduce((acc, item) => {
       acc[item.status] = (acc[item.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-  }, [chartData]);
+  }, [allChartData]);
 
   const uptime = useMemo(() => {
-    if (chartData.length === 0) return 0;
-    const upCount = chartData.filter(item => item.status === 'up').length;
-    return Math.round((upCount / chartData.length) * 100);
-  }, [chartData]);
+    if (allChartData.length === 0) return 0;
+    const upCount = allChartData.filter(item => item.status === 'up').length;
+    return Math.round((upCount / allChartData.length) * 100);
+  }, [allChartData]);
 
   const disruptionCount = useMemo(() => {
-    return chartData.filter(item => item.status !== 'up').length;
-  }, [chartData]);
+    // If datetime filter is active, count disruptions from the filtered data
+    if (dateTimeFilter) {
+      // Count all disruptions in the filtered allChartData
+      const count = allChartData.filter(item => 
+        ['down', 'timeout', 'error'].includes(item.status)
+      ).length;
+      
+      // Debug logging
+      console.log(`[${agent.name}] disruptionCount with datetime filter:`, {
+        dateTimeFilter: dateTimeFilter,
+        allChartDataLength: allChartData.length,
+        disruptionCount: count,
+        globalDisruptionCount: globalDisruptionCount
+      });
+      
+      return count;
+    }
+    
+    // When no datetime filter, use global disruption count to match dashboard
+    // This shows total disruptions across all agents, matching dashboard behavior
+    return globalDisruptionCount;
+  }, [globalDisruptionCount, allChartData, dateTimeFilter, agent.name]);
 
   const avgResponseTime = useMemo(() => {
-    const responseTimes = chartData
+    const responseTimes = allChartData
       .filter(item => item.responseTime !== null && item.responseTime !== undefined && item.responseTime > 0 && item.status === 'up')
       .map(item => item.responseTime!);
     
     if (responseTimes.length === 0) return 0;
     const average = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
-    return Math.round(average);
-  }, [chartData]);
+    const rounded = Math.round(average);
+    
+    // Debug logging
+    console.log(`[${agent.name}] avgResponseTime calculation:`, {
+      totalData: allChartData.length,
+      validResponseTimes: responseTimes.length,
+      average: average,
+      rounded: rounded,
+      dateTimeFilterActive: !!dateTimeFilter
+    });
+    
+    return rounded;
+  }, [allChartData, agent.name, dateTimeFilter]);
 
   const maxResponseTime = useMemo(() => {
     if (chartData.length === 0) return 100;
@@ -318,11 +418,11 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
               {agent.server_ip}
             </span>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              agent.is_active 
+              (agent.current_status === 'active' || agent.is_active) 
                 ? 'bg-green-100 text-green-800' 
                 : 'bg-red-100 text-red-800'
             }`}>
-              {agent.is_active ? 'فعال' : 'غیرفعال'}
+              {(agent.current_status === 'active' || agent.is_active) ? 'فعال' : 'غیرفعال'}
             </span>
             <span className="text-xs">
               پورت: {agent.port}
@@ -349,16 +449,17 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
           <div className="text-xs text-blue-600 mt-1">
             {selectedServers.length === 0 ? 'همه سرورها' : `${selectedServers.length} سرور انتخاب شده`}
           </div>
+          {dateTimeFilter && (
+            <div className="text-xs text-green-600 mt-1 font-semibold">
+              فیلتر زمانی فعال است
+            </div>
+          )}
         </div>
       </div>
 
       {/* Chart */}
-      <div className="relative">
-        {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          </div>
-        ) : selectedServers.length === 0 ? (
+      <div className="relative min-h-[120px]">
+        {selectedServers.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-gray-500">
             <div className="text-center">
               <div className="text-lg mb-2">📊 نمایش تمام اختلالات</div>
@@ -382,13 +483,13 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
             </div>
           </div>
         ) : (
-          <div className="space-y-2 transition-all duration-300 ease-in-out">
+          <div className="space-y-2">
             {/* Chart Bars - Show all disruptions (not just 'down' status) with server color */}
             <div className="flex items-end gap-1 h-20">
               {chartData.map((item, index) => (
                 <div
-                  key={`${item.time}-${index}`}
-                  className="flex-1 rounded-t transition-all duration-500 ease-in-out cursor-pointer hover:opacity-100"
+                  key={`${agent.id}-${item.time}-${index}`}
+                  className="flex-1 rounded-t cursor-pointer hover:opacity-100"
                   style={{
                     height: `${getBarHeight(item.responseTime || 0)}px`,
                     backgroundColor: item.serverColor, // Use destination server color for disruptions

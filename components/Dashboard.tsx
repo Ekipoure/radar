@@ -27,6 +27,7 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeployModal, setShowDeployModal] = useState(false);
   const [showAddAdModal, setShowAddAdModal] = useState(false);
+  const [triggerAddBannerModal, setTriggerAddBannerModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTable, setActiveTable] = useState<'servers' | 'agents' | 'ads' | 'banners'>('servers');
 
@@ -68,11 +69,11 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
     fetchData();
   }, [refreshKey]);
 
-  // Auto-refresh data every 30 seconds to show updated monitoring data (reduced frequency for better performance)
+  // Auto-refresh data every 1 minute to show updated monitoring data (reduced frequency for better performance)
   useEffect(() => {
     const interval = setInterval(() => {
       fetchData();
-    }, 30000); // Refresh every 30 seconds
+    }, 60000); // Refresh every 1 minute
 
     return () => clearInterval(interval);
   }, []);
@@ -111,6 +112,14 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleAddBanner = () => {
+    setActiveTable('banners');
+    // Small delay to ensure tab is switched before triggering modal
+    setTimeout(() => {
+      setTriggerAddBannerModal(prev => !prev);
+    }, 100);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -121,7 +130,7 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
 
   return (
     <div className="min-h-screen bg-gray-50" dir="ltr">
-      <Header onLogout={onLogout} onAddServer={() => setShowAddModal(true)} onDeploy={handleDeploy} onAddAd={handleAddAd} />
+      <Header onLogout={onLogout} onAddServer={() => setShowAddModal(true)} onDeploy={handleDeploy} onAddAd={handleAddAd} onAddBanner={handleAddBanner} />
       
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {stats && <StatsCards stats={stats} />}
@@ -202,6 +211,7 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
             <BannerTable 
               onBannerUpdated={() => setRefreshKey(prev => prev + 1)}
               onBannerDeleted={() => setRefreshKey(prev => prev + 1)}
+              triggerAddModal={triggerAddBannerModal}
             />
           )}
         </div>

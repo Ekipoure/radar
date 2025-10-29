@@ -10,6 +10,7 @@ interface SimpleBannerProps {
 export default function SimpleBanner({ banners }: SimpleBannerProps) {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(true);
+  const [animationKey, setAnimationKey] = useState(0);
 
   // Filter active banners
   const activeBanners = banners.filter(banner => banner.is_active);
@@ -37,13 +38,33 @@ export default function SimpleBanner({ banners }: SimpleBannerProps) {
           (prevIndex + 1) % activeBanners.length
         );
       } else {
-        // If only one banner, restart the animation
-        setCurrentBannerIndex(0);
+        // If only one banner, restart the animation by updating the key
+        // This forces React to re-render and restart the animation
+        setAnimationKey((prev) => prev + 1);
       }
     }, animationDuration);
 
     return () => clearTimeout(timeout);
   }, [activeBanners, currentBannerIndex]);
+
+  // Separate effect to handle animation restart for single banner
+  useEffect(() => {
+    if (activeBanners.length !== 1) return;
+    
+    // When animationKey changes, reset to initial state first
+    // This ensures the new div mounts in the correct initial position (translateX(-100%))
+    setIsAnimating(false);
+    
+    // Use double requestAnimationFrame to ensure browser has time to render
+    // the element in its initial position before starting animation
+    const rafId = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsAnimating(true);
+      });
+    });
+    
+    return () => cancelAnimationFrame(rafId);
+  }, [animationKey, activeBanners.length]);
 
   if (activeBanners.length === 0) {
     return null;
@@ -64,6 +85,7 @@ export default function SimpleBanner({ banners }: SimpleBannerProps) {
       }}
     >
       <div
+        key={animationKey}
         style={{
           color: currentBanner.color,
           fontSize: `${currentBanner.font_size}px`,
@@ -73,9 +95,10 @@ export default function SimpleBanner({ banners }: SimpleBannerProps) {
           position: 'absolute',
           left: 0,
           top: '50%',
-          transform: 'translateY(-50%)',
+          transform: 'translateX(-100%) translateY(-50%)',
           animation: isAnimating ? `scroll-right ${currentBanner.speed}s linear forwards` : 'none',
-          willChange: 'transform'
+          willChange: 'transform',
+          animationFillMode: 'forwards'
         }}
       >
         {currentBanner.text}

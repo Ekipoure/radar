@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       const agentsResult = await client.query('SELECT COUNT(*) as count FROM agents WHERE is_active = true');
       const totalAgents = parseInt(agentsResult.rows[0].count);
 
-      // Get monitoring data from last 24 hours
+      // Get monitoring data from last 6 hours
       const monitoringResult = await client.query(`
         SELECT 
           COUNT(*) as total_checks,
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
           COUNT(CASE WHEN status = 'timeout' THEN 1 END) as timeout_count,
           COUNT(CASE WHEN status = 'error' THEN 1 END) as error_count
         FROM monitoring_data 
-        WHERE checked_at >= NOW() - INTERVAL '24 hours'
+        WHERE checked_at >= NOW() - INTERVAL '6 hours'
       `);
 
       const monitoring = monitoringResult.rows[0];

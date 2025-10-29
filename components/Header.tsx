@@ -7,9 +7,10 @@ interface HeaderProps {
   onAddServer: () => void;
   onDeploy: () => void;
   onAddAd: () => void;
+  onAddBanner: () => void;
 }
 
-export default function Header({ onLogout, onAddServer, onDeploy, onAddAd }: HeaderProps) {
+export default function Header({ onLogout, onAddServer, onDeploy, onAddAd, onAddBanner }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -116,6 +117,19 @@ export default function Header({ onLogout, onAddServer, onDeploy, onAddAd }: Hea
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                       </svg>
                       <span>Deploy Agent</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        onAddBanner();
+                        setShowActionMenu(false);
+                      }}
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <svg className="h-5 w-5 mr-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                      </svg>
+                      <span>Add Banner</span>
                     </button>
                   </div>
                 </div>

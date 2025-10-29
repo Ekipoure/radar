@@ -99,10 +99,10 @@ export default function Home() {
     // Initial load
     initializeAndFetch();
     
-    // Auto-refresh data every 30 seconds (silent)
+    // Auto-refresh data every 1 minute (silent)
     const interval = setInterval(() => {
       fetchData(true);
-    }, 30000);
+    }, 60000);
     
     return () => clearInterval(interval);
   }, []);
@@ -161,11 +161,15 @@ export default function Home() {
   // Apply date/time filter to chart data
   const applyDateTimeFilter = async (filter: { date: string; timeRange: string }) => {
     try {
+      console.log('Applying date/time filter:', filter);
+      
       // Convert Persian date to Gregorian for API call
       const persianDateParts = filter.date.split('/');
       const persianYear = parseInt(persianDateParts[0]);
       const persianMonth = parseInt(persianDateParts[1]);
       const persianDay = parseInt(persianDateParts[2]);
+      
+      console.log('Parsed Persian date parts:', { persianYear, persianMonth, persianDay });
       
       // Use accurate Persian to Gregorian conversion
       const gregorianDate = persianToGregorian({
@@ -174,28 +178,64 @@ export default function Home() {
         day: persianDay
       });
       
-      // Parse time range
-      const timeRangeParts = filter.timeRange.split(' – ');
-      const startTime = timeRangeParts[0];
-      const endTime = timeRangeParts[1];
+      console.log('Gregorian conversion result:', gregorianDate);
+      console.log('Is valid gregorianDate:', !isNaN(gregorianDate.getTime()));
       
-      // Create date range for filtering - use local timezone
-      const startDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
-        parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0, 0);
-      const endDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
-        parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 59, 999);
+      // Parse time range - handle both Persian and English dash characters
+      const timeRangeParts = filter.timeRange.split(/[–-]/);
+      const startTime = timeRangeParts[0].trim();
+      const endTime = timeRangeParts[1].trim();
       
-      console.log('Filtering data from:', startDateTime, 'to:', endDateTime);
+      console.log('Parsed time range:', { startTime, endTime });
       
-      // Here you would typically make an API call to get filtered data
-      // For now, we'll just log the filter parameters
-      console.log('Filter parameters:', {
-        startDateTime: startDateTime.toISOString(),
-        endDateTime: endDateTime.toISOString(),
-        persianDate: filter.date,
-        timeRange: filter.timeRange,
-        gregorianDate: gregorianDate.toDateString()
-      });
+      // Convert Persian digits to English digits for parsing
+      const startTimeEn = startTime.replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+      const endTimeEn = endTime.replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+      
+      console.log('Converted time to English:', { startTimeEn, endTimeEn });
+      
+      // Validate gregorianDate before using
+      if (isNaN(gregorianDate.getTime())) {
+        console.error('Invalid gregorianDate, using current date:', gregorianDate);
+        const currentDate = new Date();
+        const startDateTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 
+          parseInt(startTimeEn.split(':')[0]), parseInt(startTimeEn.split(':')[1]), 0, 0);
+        const endDateTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 
+          parseInt(endTimeEn.split(':')[0]), parseInt(endTimeEn.split(':')[1]), 59, 999);
+        
+        console.log('Using current date filter:', { startDateTime, endDateTime });
+        console.log('Filter parameters:', {
+          startDateTime: startDateTime.toISOString(),
+          endDateTime: endDateTime.toISOString(),
+          persianDate: filter.date,
+          timeRange: filter.timeRange,
+          gregorianDate: 'Invalid - using current date'
+        });
+      } else {
+        // Create date range for filtering - use local timezone
+        const startDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+          parseInt(startTimeEn.split(':')[0]), parseInt(startTimeEn.split(':')[1]), 0, 0);
+        const endDateTime = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate(), 
+          parseInt(endTimeEn.split(':')[0]), parseInt(endTimeEn.split(':')[1]), 59, 999);
+        
+        // Validate dates before using toISOString
+        if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+          console.error('Invalid date range created:', { startDateTime, endDateTime, gregorianDate });
+          throw new Error('Invalid date range');
+        }
+        
+        console.log('Filtering data from:', startDateTime, 'to:', endDateTime);
+        
+        // Here you would typically make an API call to get filtered data
+        // For now, we'll just log the filter parameters
+        console.log('Filter parameters:', {
+          startDateTime: startDateTime.toISOString(),
+          endDateTime: endDateTime.toISOString(),
+          persianDate: filter.date,
+          timeRange: filter.timeRange,
+          gregorianDate: gregorianDate.toDateString()
+        });
+      }
       
       // TODO: Implement actual API call to get filtered chart data
       // const filteredData = await fetchFilteredChartData(startDateTime, endDateTime);

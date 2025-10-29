@@ -6,13 +6,21 @@ import { Banner } from '@/lib/types';
 interface BannerTableProps {
   onBannerUpdated: () => void;
   onBannerDeleted: () => void;
+  triggerAddModal?: boolean;
 }
 
-export default function BannerTable({ onBannerUpdated, onBannerDeleted }: BannerTableProps) {
+export default function BannerTable({ onBannerUpdated, onBannerDeleted, triggerAddModal }: BannerTableProps) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Watch for external trigger to open add modal
+  useEffect(() => {
+    if (triggerAddModal) {
+      setShowAddModal(true);
+    }
+  }, [triggerAddModal]);
 
   const fetchBanners = async () => {
     try {

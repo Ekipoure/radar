@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Ad } from '@/lib/types';
+import AddAdModal from './AddAdModal';
 
 interface AdTableProps {
   onAdUpdated: () => void;
@@ -11,6 +12,7 @@ interface AdTableProps {
 export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const fetchAds = async () => {
     try {
@@ -88,7 +90,15 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
   return (
     <div className="bg-white shadow-lg rounded-lg overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-medium text-gray-900">مدیریت تبلیغات</h3>
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium text-gray-900">مدیریت تبلیغات</h3>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            افزودن تبلیغ جدید
+          </button>
+        </div>
       </div>
       
       {ads.length === 0 ? (
@@ -194,6 +204,17 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {showAddModal && (
+        <AddAdModal
+          onClose={() => setShowAddModal(false)}
+          onAdAdded={() => {
+            setShowAddModal(false);
+            onAdUpdated();
+            fetchAds();
+          }}
+        />
       )}
     </div>
   );

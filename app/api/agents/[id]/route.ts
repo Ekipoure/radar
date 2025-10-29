@@ -52,6 +52,10 @@ export async function PUT(
         updateFields.push(`repo_url = $${paramCount++}`);
         values.push(updateData.repo_url);
       }
+      if (updateData.location !== undefined) {
+        updateFields.push(`location = $${paramCount++}`);
+        values.push(updateData.location);
+      }
       if (updateData.port !== undefined) {
         updateFields.push(`port = $${paramCount++}`);
         values.push(updateData.port);
