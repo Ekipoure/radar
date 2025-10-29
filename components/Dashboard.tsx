@@ -135,13 +135,13 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {stats && <StatsCards stats={stats} />}
         
-        <div className="mt-8">
+        <div className="mt-4 sm:mt-8">
           {/* Table Toggle Buttons */}
-          <div className="mb-6">
-            <div className="flex space-x-4">
+          <div className="mb-4 sm:mb-6">
+            <div className="flex flex-wrap gap-2 sm:gap-4">
               <button
                 onClick={() => setActiveTable('servers')}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                className={`px-3 py-2 sm:px-4 rounded-md text-sm sm:text-base font-medium transition-colors ${
                   activeTable === 'servers'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -151,7 +151,7 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
               </button>
               <button
                 onClick={() => setActiveTable('agents')}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                className={`px-3 py-2 sm:px-4 rounded-md text-sm sm:text-base font-medium transition-colors ${
                   activeTable === 'agents'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -161,7 +161,7 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
               </button>
               <button
                 onClick={() => setActiveTable('ads')}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                className={`px-3 py-2 sm:px-4 rounded-md text-sm sm:text-base font-medium transition-colors ${
                   activeTable === 'ads'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -171,7 +171,7 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
               </button>
               <button
                 onClick={() => setActiveTable('banners')}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                className={`px-3 py-2 sm:px-4 rounded-md text-sm sm:text-base font-medium transition-colors ${
                   activeTable === 'banners'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'

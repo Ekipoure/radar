@@ -259,35 +259,33 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50" dir="rtl">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">رادار مانیتورینگ</h1>
-                  <p className="text-sm text-gray-600">سیستم نظارت بر سرورها</p>
-                </div>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 py-3 sm:py-4">
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">رادار مانیتورینگ</h1>
+                <p className="text-xs sm:text-sm text-gray-600">سیستم نظارت بر سرورها</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="سیستم فعال - داده‌ها به صورت خودکار به‌روزرسانی می‌شوند"></div>
-                  <span className="text-xs" suppressHydrationWarning>آخرین به‌روزرسانی: {lastUpdate ? formatTableTime(lastUpdate) : 'در حال بارگذاری...'}</span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+              <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse flex-shrink-0" title="سیستم فعال - داده‌ها به صورت خودکار به‌روزرسانی می‌شوند"></div>
+                  <span className="text-[10px] sm:text-xs truncate" suppressHydrationWarning>آخرین به‌روزرسانی: {lastUpdate ? formatTableTime(lastUpdate) : 'در حال بارگذاری...'}</span>
                 </div>
-                <div className="text-xs text-gray-500 mt-1" suppressHydrationWarning>
+                <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1" suppressHydrationWarning>
                   {currentTime ? formatHeaderTime(currentTime) : 'در حال بارگذاری...'}
                 </div>
               </div>
               <Link
                 href="/dashboard"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl whitespace-nowrap order-1 sm:order-2 w-full sm:w-auto text-center"
               >
                 پنل مدیریت
               </Link>
@@ -297,9 +295,9 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6 xl:px-8">
         {/* Advertisement Section */}
-        <div className="mb-8">
+        <div className="mb-4 sm:mb-6 lg:mb-8">
           <AdDisplay />
         </div>
 
@@ -324,132 +322,134 @@ export default function Home() {
         </div> */}
 
         {/* Controls */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <div className="flex gap-2 flex-wrap">
-            {/* Location Filter - Filter by internal/external for agents (servers) */}
-            <div className="flex items-center gap-2 bg-white rounded-lg  border border-gray-200">
-              {/* <span className="text-xs text-gray-600">فیلتر سرور:</span> */}
+        <div className="flex flex-col gap-3 sm:gap-4 mb-6 sm:mb-8">
+          {/* Top Row: View Mode Buttons (Left) + Location Filter and Time Filter (Right) */}
+          <div className="flex flex-col md:flex-row gap-2 sm:gap-2 items-start md:items-center justify-between">
+            {/* View Mode and Chart Display Toggles - Left side on desktop */}
+            <div className="hidden md:flex flex-wrap gap-2 order-2 md:order-2">
               <button
-                onClick={() => setLocationFilter('all')}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                  locationFilter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                onClick={() => setViewMode('charts')}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                  viewMode === 'charts'
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
                 }`}
               >
-                همه
+                نمایش چارت
               </button>
               <button
-                onClick={() => setLocationFilter('internal')}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                  locationFilter === 'internal'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                onClick={() => setViewMode('cards')}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                  viewMode === 'cards'
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
                 }`}
               >
-                دیتاسنترهای داخلی
+                نمایش کارت
               </button>
-              <button
-                onClick={() => setLocationFilter('external')}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                  locationFilter === 'external'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                دیتاسنترهای خارجی
-              </button>
-              {/* <span className="text-xs text-gray-500 mr-2">
-                ({filteredAgents.length} سرور)
-              </span> */}
+              
+              {/* Chart Display Mode Toggle - Only show when charts view is selected */}
+              {viewMode === 'charts' && (
+                <>
+                  <button
+                    onClick={() => setChartDisplayMode('single')}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                      chartDisplayMode === 'single'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                    }`}
+                  >
+                    تک چارت
+                  </button>
+                  <button
+                    onClick={() => setChartDisplayMode('dual')}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                      chartDisplayMode === 'dual'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                    }`}
+                  >
+                    دو چارت
+                  </button>
+                </>
+              )}
             </div>
             
-            {/* Date/Time Filter Button */}
-            <button
-              onClick={() => setIsDateTimeFilterOpen(true)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                dateTimeFilter
-                  ? 'bg-green-500 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-              فیلتر بازه زمانی
-              {dateTimeFilter && (
-                <span className="bg-white bg-opacity-20 px-2 py-1 rounded text-xs">
-                  فعال
-                </span>
-              )}
-            </button>
-          </div>
-          
-          
-          <div className="flex gap-2 mr-auto">
-            <button
-              onClick={() => setViewMode('charts')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                viewMode === 'charts'
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              نمایش چارت
-            </button>
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                viewMode === 'cards'
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              نمایش کارت
-            </button>
-            
-            {/* Chart Display Mode Toggle - Only show when charts view is selected */}
-            {viewMode === 'charts' && (
-              <div className="flex gap-2 mr-4">
+            {/* Location Filter and Time Filter - Right side on desktop */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full md:w-auto order-1 md:order-1">
+              {/* Location Filter - Filter by internal/external for agents (servers) */}
+              <div className="flex items-center gap-1 sm:gap-2 bg-white rounded-lg border border-gray-200 p-1 overflow-x-auto">
                 <button
-                  onClick={() => setChartDisplayMode('single')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    chartDisplayMode === 'single'
-                      ? 'bg-green-500 text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  onClick={() => setLocationFilter('all')}
+                  className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md transition-colors whitespace-nowrap flex-shrink-0 ${
+                    locationFilter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  تک چارت
+                  همه
                 </button>
                 <button
-                  onClick={() => setChartDisplayMode('dual')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    chartDisplayMode === 'dual'
-                      ? 'bg-green-500 text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  onClick={() => setLocationFilter('internal')}
+                  className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md transition-colors whitespace-nowrap flex-shrink-0 ${
+                    locationFilter === 'internal'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  دو چارت
+                  دیتاسنترهای داخلی
+                </button>
+                <button
+                  onClick={() => setLocationFilter('external')}
+                  className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md transition-colors whitespace-nowrap flex-shrink-0 ${
+                    locationFilter === 'external'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  دیتاسنترهای خارجی
                 </button>
               </div>
-            )}
+              
+              {/* Date/Time Filter Button */}
+              <button
+                onClick={() => setIsDateTimeFilterOpen(true)}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${
+                  dateTimeFilter
+                    ? 'bg-green-500 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                <span className="hidden sm:inline">فیلتر بازه زمانی</span>
+                <span className="sm:hidden">زمان</span>
+                {dateTimeFilter && (
+                  <span className="bg-white bg-opacity-20 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs flex-shrink-0">
+                    فعال
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Active Date/Time Filter Display */}
         {dateTimeFilter && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                   </svg>
                 </div>
-                <div>
-                  <div className="text-sm font-semibold text-green-800">فیلتر بازه زمانی فعال</div>
-                  <div className="text-sm text-green-600">
-                    تاریخ: {dateTimeFilter.date} | بازه: {dateTimeFilter.timeRange}
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs sm:text-sm font-semibold text-green-800">فیلتر بازه زمانی فعال</div>
+                  <div className="text-xs sm:text-sm text-green-600 break-words">
+                    <span className="hidden sm:inline">تاریخ: {dateTimeFilter.date} | بازه: {dateTimeFilter.timeRange}</span>
+                    <span className="sm:hidden">{dateTimeFilter.date} - {dateTimeFilter.timeRange}</span>
                   </div>
                 </div>
               </div>
@@ -459,7 +459,7 @@ export default function Home() {
                   // Force refresh of all charts
                   setRefreshKey(Date.now());
                 }}
-                className="text-green-600 hover:text-green-800 text-sm font-medium"
+                className="text-green-600 hover:text-green-800 text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 px-2 sm:px-0"
               >
                 حذف فیلتر
               </button>

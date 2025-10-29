@@ -89,12 +89,12 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
 
   return (
     <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900">مدیریت تبلیغات</h3>
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900">مدیریت تبلیغات</h3>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            className="w-full sm:w-auto bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base"
           >
             افزودن تبلیغ جدید
           </button>
@@ -102,12 +102,12 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
       </div>
       
       {ads.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-gray-500 text-sm sm:text-base">
           هیچ تبلیغی یافت نشد
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 table-fixed">
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
+          <table className="min-w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '800px' }}>
             <thead className="bg-gray-50">
               <tr>
                 <th className="w-20 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -179,11 +179,11 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
                   <td className="px-4 py-4 text-right">
                     <div className="text-sm text-gray-500">{new Date(ad.created_at).toLocaleDateString('fa-IR')}</div>
                   </td>
-                  <td className="px-4 py-4 text-right">
-                    <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 text-xs justify-end">
+                  <td className="px-3 sm:px-4 py-4 text-right">
+                    <div className="flex flex-col gap-1.5 text-xs justify-end">
                       <button
                         onClick={() => handleToggleActive(ad)}
-                        className={`px-2 py-1 rounded ${
+                        className={`px-2 py-1.5 rounded whitespace-nowrap ${
                           ad.is_active
                             ? 'text-red-600 hover:text-red-900 hover:bg-red-50'
                             : 'text-green-600 hover:text-green-900 hover:bg-green-50'
@@ -193,7 +193,7 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
                       </button>
                       <button
                         onClick={() => handleDelete(ad)}
-                        className="px-2 py-1 rounded text-red-600 hover:text-red-900 hover:bg-red-50"
+                        className="px-2 py-1.5 rounded text-red-600 hover:text-red-900 hover:bg-red-50 whitespace-nowrap"
                       >
                         حذف
                       </button>

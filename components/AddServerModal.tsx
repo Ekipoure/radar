@@ -82,8 +82,8 @@ export default function AddServerModal({ onClose, onServerAdded }: AddServerModa
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
-        <div className="px-6 py-6">
+      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="px-4 sm:px-6 py-4 sm:py-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-medium text-gray-900">
               Add New Server

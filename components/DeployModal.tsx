@@ -193,20 +193,20 @@ export default function DeployModal({ isOpen, onClose }: DeployModalProps) {
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-xl">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center">
-            <CloudArrowUpIcon className="h-6 w-6 text-blue-600 mr-2" />
-            <h3 className="text-lg font-medium text-gray-900">Deploy Agent</h3>
+            <CloudArrowUpIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 mr-2" />
+            <h3 className="text-base sm:text-lg font-medium text-gray-900">Deploy Agent</h3>
           </div>
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
 
-        <div className="px-6 py-6 space-y-6">
+        <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
           {/* Agent Configuration */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

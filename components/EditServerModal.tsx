@@ -81,11 +81,11 @@ export default function EditServerModal({ server, onClose, onServerUpdated }: Ed
   if (!server) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div className="mt-3">
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="px-4 sm:px-6 py-4 sm:py-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-base sm:text-lg font-medium text-gray-900">
               Edit Server
             </h3>
             <button
@@ -293,18 +293,18 @@ export default function EditServerModal({ server, onClose, onServerUpdated }: Ed
               <div className="text-red-600 text-sm">{error}</div>
             )}
 
-            <div className="flex justify-end space-x-3 pt-4">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4">
               <button
                 type="button"
                 onClick={onClose}
-                className="btn-secondary"
+                className="btn btn-secondary text-sm sm:text-base"
                 disabled={loading}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="btn-primary"
+                className="btn btn-primary text-sm sm:text-base"
                 disabled={loading}
               >
                 {loading ? 'Updating...' : 'Update Server'}

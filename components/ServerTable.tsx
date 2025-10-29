@@ -164,25 +164,25 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
   return (
     <div className="card">
       <div className="px-4 py-5 sm:p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+          <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
             Server Status
           </h3>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            className="w-full sm:w-auto bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base"
           >
             افزودن سرور جدید
           </button>
         </div>
 
         {/* Server Group Filter */}
-        <div className="mb-4 flex items-center gap-3" dir="rtl">
-          <span className="text-sm font-medium text-gray-700">فیلتر نوع سرور:</span>
-          <div className="flex gap-2">
+        <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3" dir="rtl">
+          <span className="text-xs sm:text-sm font-medium text-gray-700">فیلتر نوع سرور:</span>
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setServerGroupFilter('all')}
-              className={`px-4 py-2 text-sm rounded-md transition-colors ${
+              className={`px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-md transition-colors ${
                 serverGroupFilter === 'all'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -192,7 +192,7 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
             </button>
             <button
               onClick={() => setServerGroupFilter('iranian')}
-              className={`px-4 py-2 text-sm rounded-md transition-colors ${
+              className={`px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-md transition-colors ${
                 serverGroupFilter === 'iranian'
                   ? 'bg-purple-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -202,7 +202,7 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
             </button>
             <button
               onClick={() => setServerGroupFilter('global')}
-              className={`px-4 py-2 text-sm rounded-md transition-colors ${
+              className={`px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-md transition-colors ${
                 serverGroupFilter === 'global'
                   ? 'bg-indigo-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -211,7 +211,7 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
               خارجی
             </button>
           </div>
-          <span className="text-sm text-gray-500">
+          <span className="text-xs sm:text-sm text-gray-500">
             ({filteredServers.length} سرور)
           </span>
         </div>
@@ -298,26 +298,26 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
                     </span>
                   </td>
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex flex-wrap gap-1 sm:gap-2 justify-start" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-1 sm:gap-2 justify-start" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleShowChart(server)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
+                        className="text-blue-600 hover:text-blue-900 flex items-center space-x-1 text-xs sm:text-sm"
                         title="View Chart"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                         <span className="hidden sm:inline">Chart</span>
                       </button>
                       <button
                         onClick={() => handleEdit(server)}
-                        className="text-primary-600 hover:text-primary-900"
+                        className="text-primary-600 hover:text-primary-900 text-xs sm:text-sm"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleToggleStatus(server)}
-                        className={`${
+                        className={`text-xs sm:text-sm ${
                           server.is_active 
                             ? 'text-warning-600 hover:text-warning-900' 
                             : 'text-success-600 hover:text-success-900'
@@ -327,7 +327,7 @@ export default function ServerTable({ servers, onServerUpdated, onServerDeleted,
                       </button>
                       <button
                         onClick={() => handleDelete(server)}
-                        className="text-danger-600 hover:text-danger-900"
+                        className="text-danger-600 hover:text-danger-900 text-xs sm:text-sm"
                       >
                         Delete
                       </button>

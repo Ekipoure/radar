@@ -47,18 +47,18 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-6 sm:space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-primary-600 rounded-full flex items-center justify-center">
-            <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 bg-primary-600 rounded-full flex items-center justify-center">
+            <svg className="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className="mt-4 sm:mt-6 text-2xl sm:text-3xl font-bold text-gray-900">
             Radar Monitoring
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-xs sm:text-sm text-gray-600">
             Sign in to your admin dashboard
           </p>
         </div>
@@ -108,11 +108,11 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             <button
               type="submit"
               disabled={loading}
-              className="btn btn-primary w-full flex justify-center py-3 text-base font-medium"
+              className="btn btn-primary w-full flex justify-center py-2.5 sm:py-3 text-sm sm:text-base font-medium"
             >
               {loading ? (
                 <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white mr-2"></div>
                   Signing in...
                 </div>
               ) : (
@@ -121,7 +121,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             </button>
           </div>
           
-          <div className="text-center text-sm text-gray-600">
+          <div className="text-center text-xs sm:text-sm text-gray-600">
             <p>Default credentials: admin / admin123</p>
           </div>
         </form>

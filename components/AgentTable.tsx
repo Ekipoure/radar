@@ -122,13 +122,13 @@ export default function AgentTable({
   return (
     <div className="card">
       <div className="px-4 py-5 sm:p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+          <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
             Agents
           </h3>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            className="w-full sm:w-auto bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base"
           >
             افزودن ایجنت جدید
           </button>
@@ -211,16 +211,16 @@ export default function AgentTable({
                     {formatLastChecked(agent.last_checked)}
                   </td>
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex flex-wrap gap-1 sm:gap-2 justify-start">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-1 sm:gap-2 justify-start">
                       <button
                         onClick={() => handleEdit(agent)}
-                        className="text-primary-600 hover:text-primary-900"
+                        className="text-primary-600 hover:text-primary-900 text-xs sm:text-sm"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleToggleStatus(agent)}
-                        className={`${
+                        className={`text-xs sm:text-sm ${
                           agent.is_active 
                             ? 'text-warning-600 hover:text-warning-900' 
                             : 'text-success-600 hover:text-success-900'
@@ -230,7 +230,7 @@ export default function AgentTable({
                       </button>
                       <button
                         onClick={() => handleDelete(agent)}
-                        className="text-danger-600 hover:text-danger-900"
+                        className="text-danger-600 hover:text-danger-900 text-xs sm:text-sm"
                       >
                         Delete
                       </button>

@@ -101,20 +101,20 @@ export default function BannerTable({ onBannerUpdated, onBannerDeleted, triggerA
 
   return (
     <div className="bg-white shadow rounded-lg">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900">مدیریت بنرها</h3>
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900">مدیریت بنرها</h3>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            className="w-full sm:w-auto bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base"
           >
             افزودن بنر جدید
           </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+      <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '900px' }}>
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -183,11 +183,11 @@ export default function BannerTable({ onBannerUpdated, onBannerDeleted, triggerA
                     {banner.is_active ? 'فعال' : 'غیرفعال'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex space-x-2">
+                <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2">
                     <button
                       onClick={() => handleToggleActive(banner)}
-                      className={`px-3 py-1 rounded text-xs ${
+                      className={`px-2 sm:px-3 py-1 rounded text-xs whitespace-nowrap ${
                         banner.is_active
                           ? 'bg-red-100 text-red-700 hover:bg-red-200'
                           : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -197,13 +197,13 @@ export default function BannerTable({ onBannerUpdated, onBannerDeleted, triggerA
                     </button>
                     <button
                       onClick={() => handleEdit(banner)}
-                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                      className="px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 whitespace-nowrap"
                     >
                       ویرایش
                     </button>
                     <button
                       onClick={() => handleDelete(banner)}
-                      className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                      className="px-2 sm:px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 whitespace-nowrap"
                     >
                       حذف
                     </button>
@@ -288,9 +288,9 @@ function AddBannerModal({ onClose, onBannerAdded }: { onClose: () => void; onBan
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">افزودن بنر جدید</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-4">افزودن بنر جدید</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -306,7 +306,7 @@ function AddBannerModal({ onClose, onBannerAdded }: { onClose: () => void; onBan
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 سرعت حرکت (ثانیه)
@@ -320,7 +320,7 @@ function AddBannerModal({ onClose, onBannerAdded }: { onClose: () => void; onBan
                 max="30"
                 placeholder="زمان کامل حرکت متن از چپ به راست (از اولین پیکسل تا آخرین پیکسل)"
               />
-              <p className="text-xs text-gray-500 mt-1">زمان کامل حرکت متن از سمت چپ به سمت راست صفحه (از اولین پیکسل تا آخرین پیکسل)</p>
+              <p className="text-xs text-gray-500 mt-1 hidden sm:block">زمان کامل حرکت متن از سمت چپ به سمت راست صفحه (از اولین پیکسل تا آخرین پیکسل)</p>
             </div>
 
             <div>
@@ -338,7 +338,7 @@ function AddBannerModal({ onClose, onBannerAdded }: { onClose: () => void; onBan
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 رنگ متن
@@ -349,7 +349,7 @@ function AddBannerModal({ onClose, onBannerAdded }: { onClose: () => void; onBan
                 onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                 className="w-full h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <p className="text-xs text-gray-500 mt-1">زمان کامل حرکت متن از سمت چپ به سمت راست صفحه (از اولین پیکسل تا آخرین پیکسل)</p>
+              <p className="text-xs text-gray-500 mt-1 hidden sm:block">زمان کامل حرکت متن از سمت چپ به سمت راست صفحه (از اولین پیکسل تا آخرین پیکسل)</p>
             </div>
 
             <div>
@@ -365,18 +365,18 @@ function AddBannerModal({ onClose, onBannerAdded }: { onClose: () => void; onBan
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 text-sm sm:text-base"
             >
               انصراف
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm sm:text-base"
             >
               {loading ? 'در حال ایجاد...' : 'ایجاد بنر'}
             </button>
@@ -437,9 +437,9 @@ function EditBannerModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">ویرایش بنر</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-4">ویرایش بنر</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -526,18 +526,18 @@ function EditBannerModal({
             </label>
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 text-sm sm:text-base"
             >
               انصراف
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm sm:text-base"
             >
               {loading ? 'در حال به‌روزرسانی...' : 'به‌روزرسانی بنر'}
             </button>

@@ -50,21 +50,21 @@ export default function Header({ onLogout, onAddServer, onDeploy, onAddAd, onAdd
   return (
     <header className="bg-white shadow-sm border-b border-gray-200" dir="ltr">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-14 sm:h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
-              <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="h-7 w-7 sm:h-8 sm:w-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                <svg className="h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <h1 className="ml-3 text-xl font-semibold text-gray-900">
+              <h1 className="ml-2 sm:ml-3 text-lg sm:text-xl font-semibold text-gray-900">
                 Dashboard
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Hamburger Menu for Actions */}
             <div className="relative" ref={actionMenuRef}>
               <button
@@ -78,7 +78,7 @@ export default function Header({ onLogout, onAddServer, onDeploy, onAddAd, onAdd
               </button>
 
               {showActionMenu && (
-                <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                <div className="origin-top-right absolute right-0 mt-2 w-48 sm:w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
                   <div className="py-2">
                     <button
                       onClick={() => {
@@ -149,7 +149,7 @@ export default function Header({ onLogout, onAddServer, onDeploy, onAddAd, onAdd
               </button>
 
               {showUserMenu && (
-                <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                <div className="origin-top-right absolute right-0 mt-2 w-40 sm:w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
                   <div className="py-1">
                     <button
                       onClick={handleLogout}

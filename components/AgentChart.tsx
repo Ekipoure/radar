@@ -418,24 +418,24 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
   }, []);
 
   return (
-    <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`} dir="rtl">
+    <div className={`bg-white rounded-xl shadow-lg p-3 sm:p-4 md:p-6 ${className}`} dir="rtl">
       {/* Header */}
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex justify-between items-start mb-4 sm:mb-6">
         <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">{agent.name}</h3>
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+          <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-1 sm:mb-2">{agent.name}</h3>
+          <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
             <span className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-blue-500"></div>
               {agent.server_ip}
             </span>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+            <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium ${
               (agent.current_status === 'active' || agent.is_active) 
                 ? 'bg-green-100 text-green-800' 
                 : 'bg-red-100 text-red-800'
             }`}>
               {(agent.current_status === 'active' || agent.is_active) ? 'فعال' : 'غیرفعال'}
             </span>
-            <span className="text-xs">
+            <span className="text-[10px] sm:text-xs">
               پورت: {agent.port}
             </span>
           </div>
@@ -445,23 +445,23 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
 
 
       {/* Stats Cards - Show All Data */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-gray-900">{uptime}%</div>
-          <div className="text-xs text-gray-600">آپتایم کل</div>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center">
+          <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{uptime}%</div>
+          <div className="text-[10px] sm:text-xs text-gray-600">آپتایم کل</div>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-gray-900">{avgResponseTime}ms</div>
-          <div className="text-xs text-gray-600">میانگین پاسخ</div>
+        <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center">
+          <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{avgResponseTime}ms</div>
+          <div className="text-[10px] sm:text-xs text-gray-600">میانگین پاسخ</div>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-red-600">{disruptionCount}</div>
-          <div className="text-xs text-gray-600">تعداد اختلالات</div>
-          <div className="text-xs text-blue-600 mt-1">
+        <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center">
+          <div className="text-lg sm:text-xl md:text-2xl font-bold text-red-600">{disruptionCount}</div>
+          <div className="text-[10px] sm:text-xs text-gray-600">تعداد اختلالات</div>
+          <div className="text-[10px] sm:text-xs text-blue-600 mt-0.5 sm:mt-1">
             {selectedServers.length === 0 ? 'همه سرورها' : `${selectedServers.length} سرور انتخاب شده`}
           </div>
           {dateTimeFilter && (
-            <div className="text-xs text-green-600 mt-1 font-semibold">
+            <div className="text-[10px] sm:text-xs text-green-600 mt-0.5 sm:mt-1 font-semibold">
               فیلتر زمانی فعال است
             </div>
           )}
@@ -473,8 +473,8 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
         {selectedServers.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-gray-500">
             <div className="text-center">
-              <div className="text-lg mb-2">📊 نمایش تمام اختلالات</div>
-              <div className="text-sm">در حال نمایش تمام اختلالات (بدون فیلتر سرور)</div>
+              <div className="text-sm sm:text-base md:text-lg mb-1 sm:mb-2">📊 نمایش تمام اختلالات</div>
+              <div className="text-xs sm:text-sm">در حال نمایش تمام اختلالات (بدون فیلتر سرور)</div>
             </div>
           </div>
         ) : chartData.length === 0 ? (
@@ -482,13 +482,13 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
             <div className="text-center">
               {allChartData.length === 0 ? (
                 <>
-                  <div className="text-lg mb-2">✅ هیچ اختلالی یافت نشد</div>
-                  <div className="text-sm">تمام سرورهای مقصد در وضعیت عادی هستند</div>
+                  <div className="text-sm sm:text-base md:text-lg mb-1 sm:mb-2">✅ هیچ اختلالی یافت نشد</div>
+                  <div className="text-xs sm:text-sm">تمام سرورهای مقصد در وضعیت عادی هستند</div>
                 </>
               ) : (
                 <>
-                  <div className="text-lg mb-2">🔍 اختلالی در سرورهای انتخاب شده یافت نشد</div>
-                  <div className="text-sm">سرورهای انتخاب شده در این بازه زمانی اختلال نداشته‌اند</div>
+                  <div className="text-sm sm:text-base md:text-lg mb-1 sm:mb-2">🔍 اختلالی در سرورهای انتخاب شده یافت نشد</div>
+                  <div className="text-xs sm:text-sm">سرورهای انتخاب شده در این بازه زمانی اختلال نداشته‌اند</div>
                 </>
               )}
             </div>
@@ -514,7 +514,7 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
             </div>
             
             {/* Time Labels */}
-            <div className="flex justify-between text-xs text-gray-500 mt-2">
+            <div className="flex justify-between text-[10px] sm:text-xs text-gray-500 mt-2">
               <span suppressHydrationWarning>{chartData[0]?.time}</span>
               <span suppressHydrationWarning>{chartData[chartData.length - 1]?.time}</span>
             </div>
@@ -523,24 +523,24 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
       </div>
 
       {/* Status Legend - Show all disruption types */}
-      <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-gray-200">
+      <div className="flex flex-wrap gap-2 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
         {Object.entries(statusLabels)
           .filter(([status]) => status !== 'up')
           .map(([status, label]) => (
-            <div key={status} className="flex items-center gap-2">
+            <div key={status} className="flex items-center gap-1.5 sm:gap-2">
               <div 
-                className="w-3 h-3 rounded-full" 
+                className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full" 
                 style={{ backgroundColor: statusColors[status as keyof typeof statusColors] }}
               ></div>
-              <span className="text-sm text-gray-600">{label}</span>
-              <span className="text-sm font-medium text-gray-900">
+              <span className="text-xs sm:text-sm text-gray-600">{label}</span>
+              <span className="text-xs sm:text-sm font-medium text-gray-900">
                 ({statusCounts[status] || 0})
               </span>
               {/* <span className="text-xs text-blue-600 font-medium">(کندل)</span> */}
             </div>
           ))}
         {chartData.length === 0 && (
-          <div className="text-sm text-green-600 font-medium">
+          <div className="text-xs sm:text-sm text-green-600 font-medium">
             ✅ هیچ اختلالی در این بازه زمانی وجود ندارد
           </div>
         )}
@@ -549,23 +549,23 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
       {/* Enhanced Tooltip for Disruptions */}
       {hoveredItem && (
         <div 
-          className="fixed z-50 bg-gray-900 text-white p-4 rounded-lg shadow-xl text-sm max-w-sm border border-gray-700"
+          className="fixed z-50 bg-gray-900 text-white p-2 sm:p-4 rounded-lg shadow-xl text-xs sm:text-sm max-w-sm border border-gray-700"
           style={{
             left: `${hoverPosition.x + 10}px`,
             top: `${hoverPosition.y - 10}px`,
           }}
         >
-          <div className="font-bold mb-3 text-lg flex items-center gap-2">
+          <div className="font-bold mb-2 sm:mb-3 text-sm sm:text-base md:text-lg flex items-center gap-1.5 sm:gap-2">
             <div 
-              className="w-4 h-4 rounded-full" 
+              className="w-3 h-3 sm:w-4 sm:h-4 rounded-full" 
               style={{ backgroundColor: hoveredItem.serverColor }}
             ></div>
             {hoveredItem.serverName}
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5 sm:space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-gray-300">نوع اختلال:</span>
-              <span className={`px-2 py-1 rounded text-xs font-medium ${
+              <span className="text-gray-300 text-[10px] sm:text-xs">نوع اختلال:</span>
+              <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs font-medium ${
                 hoveredItem.status === 'down' ? 'bg-red-600' :
                 hoveredItem.status === 'timeout' ? 'bg-yellow-600' :
                 hoveredItem.status === 'error' ? 'bg-purple-600' :
@@ -576,21 +576,21 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-300">زمان:</span>
-              <span className="text-white">{hoveredItem.time}</span>
+              <span className="text-gray-300 text-[10px] sm:text-xs">زمان:</span>
+              <span className="text-white text-[10px] sm:text-xs">{hoveredItem.time}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-300">زمان پاسخ:</span>
-              <span className="text-white">{hoveredItem.responseTime || 0}ms</span>
+              <span className="text-gray-300 text-[10px] sm:text-xs">زمان پاسخ:</span>
+              <span className="text-white text-[10px] sm:text-xs">{hoveredItem.responseTime || 0}ms</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-300">سرور مقصد:</span>
-              <span className="text-white">{hoveredItem.serverName}</span>
+              <span className="text-gray-300 text-[10px] sm:text-xs">سرور مقصد:</span>
+              <span className="text-white text-[10px] sm:text-xs">{hoveredItem.serverName}</span>
             </div>
             {hoveredItem.errorMessage && (
-              <div className="mt-3 pt-2 border-t border-gray-700">
-                <div className="text-gray-300 text-xs mb-1">جزئیات خطا:</div>
-                <div className="text-red-300 text-xs bg-gray-800 p-2 rounded">
+              <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-gray-700">
+                <div className="text-gray-300 text-[10px] sm:text-xs mb-0.5 sm:mb-1">جزئیات خطا:</div>
+                <div className="text-red-300 text-[10px] sm:text-xs bg-gray-800 p-1.5 sm:p-2 rounded">
                   {hoveredItem.errorMessage.length > 100 
                     ? hoveredItem.errorMessage.substring(0, 100) + '...' 
                     : hoveredItem.errorMessage}

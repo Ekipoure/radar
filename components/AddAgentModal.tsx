@@ -78,10 +78,10 @@ export default function AddAgentModal({ onClose, onAgentAdded }: AddAgentModalPr
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
-        <div className="px-6 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-medium text-gray-900">
+      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-medium text-gray-900">
               افزودن ایجنت جدید
             </h3>
             <button
@@ -200,18 +200,18 @@ export default function AddAgentModal({ onClose, onAgentAdded }: AddAgentModalPr
               </div>
             )}
 
-            <div className="flex justify-end space-x-3 pt-4" dir="ltr">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4" dir="ltr">
               <button
                 type="button"
                 onClick={onClose}
-                className="btn btn-secondary"
+                className="btn btn-secondary text-sm sm:text-base"
               >
                 انصراف
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="btn btn-primary"
+                className="btn btn-primary text-sm sm:text-base"
               >
                 {loading ? 'در حال افزودن...' : 'افزودن ایجنت'}
               </button>
