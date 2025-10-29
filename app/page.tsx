@@ -327,8 +327,8 @@ export default function Home() {
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
           <div className="flex gap-2 flex-wrap">
             {/* Location Filter - Filter by internal/external for agents (servers) */}
-            <div className="flex items-center gap-2 bg-white rounded-lg px-2 border border-gray-200">
-              <span className="text-xs text-gray-600">فیلتر سرور:</span>
+            <div className="flex items-center gap-2 bg-white rounded-lg  border border-gray-200">
+              {/* <span className="text-xs text-gray-600">فیلتر سرور:</span> */}
               <button
                 onClick={() => setLocationFilter('all')}
                 className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
@@ -347,7 +347,7 @@ export default function Home() {
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                داخلی
+                دیتاسنترهای داخلی
               </button>
               <button
                 onClick={() => setLocationFilter('external')}
@@ -357,11 +357,11 @@ export default function Home() {
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                خارجی
+                دیتاسنترهای خارجی
               </button>
-              <span className="text-xs text-gray-500 mr-2">
+              {/* <span className="text-xs text-gray-500 mr-2">
                 ({filteredAgents.length} سرور)
-              </span>
+              </span> */}
             </div>
             
             {/* Date/Time Filter Button */}

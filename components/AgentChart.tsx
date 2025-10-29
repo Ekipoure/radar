@@ -92,20 +92,19 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
     }
   }, []);
 
-  // Apply server filter to chart data - memoized for performance
-  const applyServerFilter = useCallback((allData: ChartData[], disruptionsData: ChartData[]) => {
+  // Create filtered version of allChartData based on selected servers
+  // This will be used for all chart information (stats, legend, etc.)
+  const filteredChartData = useMemo(() => {
     if (selectedServers.length === 0) {
-      // If no servers selected, show all disruptions
-      setChartData(disruptionsData);
-      return;
+      // If no servers selected, return all data
+      return allChartData;
     }
     
-    // Filter disruptions by selected servers
-    const filteredDisruptions = disruptionsData.filter(item => 
+    // Filter all data by selected servers
+    return allChartData.filter(item => 
       item.serverId && selectedServers.includes(item.serverId)
     );
-    setChartData(filteredDisruptions);
-  }, [selectedServers]);
+  }, [allChartData, selectedServers]);
 
   const fetchChartData = useCallback(async (isRefresh = false) => {
     // Throttle API calls - don't fetch more than once every 5 seconds for refreshes
@@ -270,8 +269,8 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
           allChartDataRef.current = allData;
           setLastFetchTime(now);
           
-          // Apply server filter to disruptions
-          applyServerFilter(allData, filteredData);
+          // chartData (candles) will be updated automatically via the useEffect
+          // that watches filteredChartData, which is computed from allChartData
         } else {
           console.log('Data unchanged, skipping update to prevent jumping');
         }
@@ -283,7 +282,7 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
     } catch (error) {
       console.error('Error fetching chart data:', error);
     }
-  }, [agent.name, agent.server_ip, dateTimeFilter, applyServerFilter, lastFetchTime]);
+  }, [agent.name, agent.server_ip, dateTimeFilter, lastFetchTime]);
 
   useEffect(() => {
     // Initialize ref
@@ -304,59 +303,70 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
     return () => clearInterval(interval);
   }, [fetchChartData, fetchGlobalDisruptionCount]);
 
-  // Apply filter when selected servers change
+  // Apply filter when selected servers or filteredChartData changes
+  // Update chartData (candles) to show only disruptions from filteredChartData
   useEffect(() => {
-    if (allChartData.length > 0) {
-      // Re-filter disruptions based on current allChartData
-      const disruptionsData = allChartData.filter(item => 
+    if (filteredChartData.length >= 0) {
+      // Filter to only show disruptions (down, timeout, error status) for candles
+      // Use filteredChartData (which already respects server filter)
+      const disruptionsData = filteredChartData.filter(item => 
         ['down', 'timeout', 'error'].includes(item.status)
       );
-      applyServerFilter(allChartData, disruptionsData);
+      setChartData(disruptionsData);
     }
-  }, [selectedServers, allChartData, applyServerFilter]);
+  }, [filteredChartData]);
 
 
   // Memoized computed values for better performance
+  // Use filteredChartData (which respects server filter) for all calculations
   const statusCounts = useMemo(() => {
-    // Use allChartData for status counts to show all statuses in legend
-    return allChartData.reduce((acc, item) => {
+    // Use filteredChartData for status counts to respect server filter
+    return filteredChartData.reduce((acc, item) => {
       acc[item.status] = (acc[item.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-  }, [allChartData]);
+  }, [filteredChartData]);
 
   const uptime = useMemo(() => {
-    if (allChartData.length === 0) return 0;
-    const upCount = allChartData.filter(item => item.status === 'up').length;
-    return Math.round((upCount / allChartData.length) * 100);
-  }, [allChartData]);
+    if (filteredChartData.length === 0) return 0;
+    const upCount = filteredChartData.filter(item => item.status === 'up').length;
+    return Math.round((upCount / filteredChartData.length) * 100);
+  }, [filteredChartData]);
 
   const disruptionCount = useMemo(() => {
     // If datetime filter is active, count disruptions from the filtered data
     if (dateTimeFilter) {
-      // Count all disruptions in the filtered allChartData
-      const count = allChartData.filter(item => 
+      // Count all disruptions in the filteredChartData (respects server filter)
+      const count = filteredChartData.filter(item => 
         ['down', 'timeout', 'error'].includes(item.status)
       ).length;
       
       // Debug logging
       console.log(`[${agent.name}] disruptionCount with datetime filter:`, {
         dateTimeFilter: dateTimeFilter,
-        allChartDataLength: allChartData.length,
+        filteredChartDataLength: filteredChartData.length,
         disruptionCount: count,
-        globalDisruptionCount: globalDisruptionCount
+        globalDisruptionCount: globalDisruptionCount,
+        selectedServersCount: selectedServers.length
       });
       
       return count;
     }
     
-    // When no datetime filter, use global disruption count to match dashboard
-    // This shows total disruptions across all agents, matching dashboard behavior
-    return globalDisruptionCount;
-  }, [globalDisruptionCount, allChartData, dateTimeFilter, agent.name]);
+    // When no datetime filter, count disruptions from filtered data
+    // But if no servers selected, we might want to show global count
+    if (selectedServers.length === 0) {
+      return globalDisruptionCount;
+    }
+    
+    // Count disruptions from filtered data
+    return filteredChartData.filter(item => 
+      ['down', 'timeout', 'error'].includes(item.status)
+    ).length;
+  }, [globalDisruptionCount, filteredChartData, dateTimeFilter, agent.name, selectedServers.length]);
 
   const avgResponseTime = useMemo(() => {
-    const responseTimes = allChartData
+    const responseTimes = filteredChartData
       .filter(item => item.responseTime !== null && item.responseTime !== undefined && item.responseTime > 0 && item.status === 'up')
       .map(item => item.responseTime!);
     
@@ -366,23 +376,24 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
     
     // Debug logging
     console.log(`[${agent.name}] avgResponseTime calculation:`, {
-      totalData: allChartData.length,
+      totalData: filteredChartData.length,
       validResponseTimes: responseTimes.length,
       average: average,
       rounded: rounded,
-      dateTimeFilterActive: !!dateTimeFilter
+      dateTimeFilterActive: !!dateTimeFilter,
+      selectedServersCount: selectedServers.length
     });
     
     return rounded;
-  }, [allChartData, agent.name, dateTimeFilter]);
+  }, [filteredChartData, agent.name, dateTimeFilter, selectedServers.length]);
 
   const maxResponseTime = useMemo(() => {
-    if (chartData.length === 0) return 100;
-    const validResponseTimes = chartData
+    // Use filteredChartData instead of chartData for consistent filtering
+    const validResponseTimes = filteredChartData
       .filter(d => d.responseTime !== null && d.responseTime !== undefined && d.responseTime > 0)
       .map(d => d.responseTime!);
     return validResponseTimes.length > 0 ? Math.max(...validResponseTimes, 100) : 100;
-  }, [chartData]);
+  }, [filteredChartData]);
 
   const getBarHeight = useCallback((responseTime: number | null | undefined) => {
     const maxHeight = 60; // Maximum height in pixels
@@ -525,7 +536,7 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
               <span className="text-sm font-medium text-gray-900">
                 ({statusCounts[status] || 0})
               </span>
-              <span className="text-xs text-blue-600 font-medium">(کندل)</span>
+              {/* <span className="text-xs text-blue-600 font-medium">(کندل)</span> */}
             </div>
           ))}
         {chartData.length === 0 && (
