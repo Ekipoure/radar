@@ -327,7 +327,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row gap-2 sm:gap-2 items-start md:items-center justify-between">
             {/* View Mode and Chart Display Toggles - Left side on desktop */}
             <div className="hidden md:flex flex-wrap gap-2 order-2 md:order-2">
-              <button
+              {/* <button
                 onClick={() => setViewMode('charts')}
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   viewMode === 'charts'
@@ -346,7 +346,7 @@ export default function Home() {
                 }`}
               >
                 نمایش کارت
-              </button>
+              </button> */}
               
               {/* Chart Display Mode Toggle - Only show when charts view is selected */}
               {viewMode === 'charts' && (

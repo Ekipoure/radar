@@ -107,22 +107,22 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
         </div>
       ) : (
         <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <table className="min-w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '800px' }}>
+          <table className="w-full min-w-full divide-y divide-gray-200 table-auto">
             <thead className="bg-gray-50">
               <tr>
                 <th className="w-20 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   تصویر
                 </th>
-                <th className="w-32 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   عنوان
                 </th>
-                <th className="w-48 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   لینک
                 </th>
-                <th className="w-24 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   وضعیت
                 </th>
-                <th className="w-32 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   تاریخ ایجاد
                 </th>
                 <th className="w-40 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">

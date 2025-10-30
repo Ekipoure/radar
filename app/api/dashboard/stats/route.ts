@@ -8,6 +8,10 @@ import { getServersWithAdvancedStatus } from '@/lib/monitoring';
 export const dynamic = 'force-dynamic';
 
 function getAuthToken(request: NextRequest): string | null {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
   return request.cookies.get('auth-token')?.value || null;
 }
 

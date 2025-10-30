@@ -73,7 +73,7 @@ export default function GlobalFilters({
         {showServerFilter && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">فیلتر سرورها:</span>
+              <span className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">فیلتر سایت:</span>
               <div className="flex gap-1">
                 <button
                   onClick={handleSelectAll}
