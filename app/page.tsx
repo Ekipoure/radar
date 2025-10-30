@@ -274,14 +274,8 @@ export default function Home() {
             </div>
             
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-              <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse flex-shrink-0" title="سیستم فعال - داده‌ها به صورت خودکار به‌روزرسانی می‌شوند"></div>
-                  <span className="text-[10px] sm:text-xs truncate" suppressHydrationWarning>آخرین به‌روزرسانی: {lastUpdate ? formatTableTime(lastUpdate) : 'در حال بارگذاری...'}</span>
-                </div>
-                <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1" suppressHydrationWarning>
-                  {currentTime ? formatHeaderTime(currentTime) : 'در حال بارگذاری...'}
-                </div>
+              <div className="text-xs sm:text-sm text-gray-700 order-2 sm:order-1">
+                <span className="whitespace-nowrap">پایش هوشمند، تصمیم مطمئن</span>
               </div>
               <Link
                 href="/dashboard"

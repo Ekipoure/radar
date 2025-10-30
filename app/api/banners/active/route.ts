@@ -16,7 +16,11 @@ export async function GET() {
       
       const banners: Banner[] = result.rows;
       
-      return NextResponse.json({ banners });
+      const res = NextResponse.json({ banners });
+      res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.headers.set('Pragma', 'no-cache');
+      res.headers.set('Expires', '0');
+      return res;
     } finally {
       client.release();
     }

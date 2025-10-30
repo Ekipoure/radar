@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { usePathname } from 'next/navigation';
 import { Banner } from '@/lib/types';
 import SimpleBanner from './SimpleBanner';
@@ -32,12 +32,20 @@ export default function BannerProvider({ children }: BannerProviderProps) {
   // Only show banners on the main page (not in dashboard)
   const shouldShowBanners = pathname === '/';
 
+  const prevDataJsonRef = useRef<string>('');
+
   const fetchBanners = async () => {
     try {
-      const response = await fetch('/api/banners/active');
+      // Prevent caching by adding cache: 'no-store' and a cache-busting param
+      const response = await fetch(`/api/banners/active?ts=${Date.now()}` , { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
-        setBanners(data.banners);
+        // Deep-compare to avoid unnecessary state updates that can interrupt animation
+        const nextJson = JSON.stringify(data.banners);
+        if (nextJson !== prevDataJsonRef.current) {
+          prevDataJsonRef.current = nextJson;
+          setBanners(data.banners);
+        }
       }
     } catch (error) {
       console.error('Error fetching banners:', error);
@@ -49,6 +57,18 @@ export default function BannerProvider({ children }: BannerProviderProps) {
   useEffect(() => {
     if (shouldShowBanners) {
       fetchBanners();
+      // Poll periodically to reflect backend changes without full reload
+      const intervalId = setInterval(fetchBanners, 15000);
+      // Refresh on tab focus/visibility change
+      const onFocus = () => fetchBanners();
+      const onVisibility = () => { if (!document.hidden) fetchBanners(); };
+      window.addEventListener('focus', onFocus);
+      document.addEventListener('visibilitychange', onVisibility);
+      return () => {
+        clearInterval(intervalId);
+        window.removeEventListener('focus', onFocus);
+        document.removeEventListener('visibilitychange', onVisibility);
+      };
     } else {
       setLoading(false);
     }
