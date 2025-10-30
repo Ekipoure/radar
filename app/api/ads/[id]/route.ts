@@ -81,13 +81,16 @@ export async function PUT(
 
     // Validate URLs if provided
     if (image_url) {
-      try {
-        new URL(image_url);
-      } catch {
-        return NextResponse.json(
-          { error: 'Invalid image URL format' },
-          { status: 400 }
-        );
+      const isRelativeUploadPath = typeof image_url === 'string' && (image_url.startsWith('/uploads/') || image_url.startsWith('/api/uploads/'));
+      if (!isRelativeUploadPath) {
+        try {
+          new URL(image_url);
+        } catch {
+          return NextResponse.json(
+            { error: 'Invalid image URL format' },
+            { status: 400 }
+          );
+        }
       }
     }
 

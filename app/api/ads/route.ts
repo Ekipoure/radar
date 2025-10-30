@@ -63,14 +63,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate image URL
-    try {
-      new URL(image_url);
-    } catch {
-      return NextResponse.json(
-        { error: 'Invalid image URL format' },
-        { status: 400 }
-      );
+    // Validate image URL: allow absolute URLs and server-relative uploads path
+    const isRelativeUploadPath = typeof image_url === 'string' && (image_url.startsWith('/uploads/') || image_url.startsWith('/api/uploads/'));
+    if (!isRelativeUploadPath) {
+      try {
+        // Throws only if not a valid absolute URL
+        new URL(image_url);
+      } catch {
+        return NextResponse.json(
+          { error: 'Invalid image URL format' },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate link URL if provided
