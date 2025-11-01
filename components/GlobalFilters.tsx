@@ -26,7 +26,11 @@ export default function GlobalFilters({
   useEffect(() => {
     const fetchDestinationServers = async () => {
       try {
-        const response = await fetch('/api/public/servers');
+        // Use cache: 'no-store' to prevent Next.js from caching responses in production
+        // This ensures new servers appear immediately without requiring a rebuild
+        const response = await fetch('/api/public/servers', {
+          cache: 'no-store'
+        });
         if (response.ok) {
           const data = await response.json();
           const servers: DestinationServer[] = data.servers.map((server: any) => ({
@@ -43,6 +47,13 @@ export default function GlobalFilters({
 
     if (showServerFilter) {
       fetchDestinationServers();
+      
+      // Refresh servers list periodically to detect new servers/agents
+      const interval = setInterval(() => {
+        fetchDestinationServers();
+      }, 30000); // Refresh every 30 seconds
+      
+      return () => clearInterval(interval);
     }
   }, [showServerFilter]);
 

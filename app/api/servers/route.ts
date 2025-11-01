@@ -5,6 +5,9 @@ import { verifyToken } from '@/lib/auth';
 import { getMonitoringHistory, getServersWithAdvancedStatus } from '@/lib/monitoring';
 import monitoringService from '@/lib/monitoring-service';
 
+// Force dynamic rendering - prevent static optimization in production build
+export const dynamic = 'force-dynamic';
+
 function getAuthToken(request: NextRequest): string | null {
   const authHeader = request.headers.get('authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {

@@ -3,6 +3,9 @@ import pool from '@/lib/database';
 import { Agent, CreateAgentData } from '@/lib/types';
 import { verifyToken } from '@/lib/auth';
 
+// Force dynamic rendering - prevent static optimization in production build
+export const dynamic = 'force-dynamic';
+
 function getAuthToken(request: NextRequest): string | null {
   const authHeader = request.headers.get('authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {

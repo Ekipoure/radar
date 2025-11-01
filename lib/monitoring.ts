@@ -96,7 +96,7 @@ export async function getServersForMonitoring(): Promise<Server[]> {
  * Process monitoring data to apply consecutive timeout logic for servers
  * If a server has N consecutive timeouts, the next record should be marked as 'down'
  */
-function applyConsecutiveTimeoutLogic(
+export function applyConsecutiveTimeoutLogic(
   data: MonitoringData[],
   timeoutCount: number
 ): MonitoringData[] {
@@ -439,6 +439,7 @@ export async function getServersWithStatus(): Promise<ServerWithStatus[]> {
 /**
  * New logic: Server is considered inactive only if ALL recent requests have failed
  * This function determines server status based on multiple recent monitoring results
+ * IMPORTANT: Applies consecutive timeout logic before determining status
  */
 export async function getServersWithAdvancedStatus(): Promise<ServerWithStatus[]> {
   const client = await pool.connect();
@@ -455,7 +456,37 @@ export async function getServersWithAdvancedStatus(): Promise<ServerWithStatus[]
     const servers = [];
     
     for (const server of serversResult.rows) {
-      // Get latest monitoring data for this server
+      // Get server's timeout_count
+      const timeoutCount = server.timeout_count || 3;
+      
+      // Get monitoring data for this server - need enough records to apply consecutive timeout logic
+      // Get more records to properly apply consecutive timeout logic (need at least timeoutCount + recent records)
+      // First try to get records from past hour, if not enough, get from a longer period
+      const limitValue = Math.max(10, timeoutCount + 5);
+      
+      // Try to get recent data from past hour
+      let recentResult = await client.query(`
+        SELECT id, server_id, source_ip, status, response_time, error_message, checked_at
+        FROM monitoring_data
+        WHERE server_id = $1
+          AND checked_at > NOW() - INTERVAL '1 hour'
+        ORDER BY checked_at ASC
+        LIMIT $2
+      `, [server.id, limitValue]);
+      
+      // If we don't have enough data from past hour, get from past 24 hours
+      if (recentResult.rows.length < 5) {
+        recentResult = await client.query(`
+          SELECT id, server_id, source_ip, status, response_time, error_message, checked_at
+          FROM monitoring_data
+          WHERE server_id = $1
+            AND checked_at > NOW() - INTERVAL '24 hours'
+          ORDER BY checked_at ASC
+          LIMIT $2
+        `, [server.id, limitValue]);
+      }
+      
+      // Get latest raw data for fallback
       const latestResult = await client.query(`
         SELECT status, checked_at, response_time, error_message
         FROM monitoring_data
@@ -464,45 +495,46 @@ export async function getServersWithAdvancedStatus(): Promise<ServerWithStatus[]
         LIMIT 1
       `, [server.id]);
       
-      // Get recent monitoring data (last 5 checks in past hour)
-      const recentResult = await client.query(`
-        SELECT status
-        FROM monitoring_data
-        WHERE server_id = $1
-          AND checked_at > NOW() - INTERVAL '1 hour'
-        ORDER BY checked_at DESC
-        LIMIT 5
-      `, [server.id]);
+      // Apply consecutive timeout logic to recent data
+      const processedRecentData = applyConsecutiveTimeoutLogic(recentResult.rows, timeoutCount);
       
-      const latest = latestResult.rows[0];
-      const recentData = recentResult.rows;
+      // Get the last processed records (reverse order for status calculation)
+      // Use last 5 records if available, otherwise use all
+      const recentDataForStatus = processedRecentData.length > 0
+        ? processedRecentData.slice(-5).reverse()
+        : [];
       
-      // Calculate status based on recent data
+      // Get latest status from processed data
+      const latestProcessed = processedRecentData.length > 0 
+        ? processedRecentData[processedRecentData.length - 1]
+        : latestResult.rows[0];
+      
+      // Calculate status based on processed recent data
       let currentStatus = 'unknown';
-      if (recentData.length > 0) {
-        const successCount = recentData.filter(r => r.status === 'up').length;
-        const failedCount = recentData.filter(r => ['down', 'timeout', 'error', 'skipped'].includes(r.status)).length;
+      if (recentDataForStatus.length > 0) {
+        const successCount = recentDataForStatus.filter(r => r.status === 'up').length;
+        const failedCount = recentDataForStatus.filter(r => ['down', 'timeout', 'error', 'skipped'].includes(r.status)).length;
         
-        if (failedCount === recentData.length && recentData.length > 0) {
+        if (failedCount === recentDataForStatus.length && recentDataForStatus.length > 0) {
           currentStatus = 'inactive';
         } else if (successCount > 0) {
           currentStatus = 'active';
         } else {
-          currentStatus = latest?.status || 'unknown';
+          currentStatus = latestProcessed?.status || 'unknown';
         }
       } else {
-        currentStatus = latest?.status || 'unknown';
+        currentStatus = latestProcessed?.status || 'unknown';
       }
       
       servers.push({
         ...server,
         current_status: currentStatus,
-        last_checked: latest?.checked_at,
-        response_time: latest?.response_time,
-        error_message: latest?.error_message,
-        total_count: recentData.length,
-        success_count: recentData.filter(r => r.status === 'up').length,
-        failed_count: recentData.filter(r => ['down', 'timeout', 'error', 'skipped'].includes(r.status)).length
+        last_checked: latestProcessed?.checked_at || latestResult.rows[0]?.checked_at,
+        response_time: latestProcessed?.response_time || latestResult.rows[0]?.response_time,
+        error_message: latestProcessed?.error_message || latestResult.rows[0]?.error_message,
+        total_count: recentDataForStatus.length,
+        success_count: recentDataForStatus.filter(r => r.status === 'up').length,
+        failed_count: recentDataForStatus.filter(r => ['down', 'timeout', 'error', 'skipped'].includes(r.status)).length
       });
     }
     

@@ -63,6 +63,14 @@ export async function PUT(
     const body: UpdateBannerData = await request.json();
     const { text, speed, color, background_color, font_size, is_active } = body;
 
+    // Validate speed if provided: must be between 3 and 30
+    if (speed !== undefined && (speed < 3 || speed > 30)) {
+      return NextResponse.json(
+        { error: 'سرعت باید بین 3 تا 30 ثانیه باشد' },
+        { status: 400 }
+      );
+    }
+
     const client = await pool.connect();
     
     try {

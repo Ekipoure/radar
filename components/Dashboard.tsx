@@ -39,9 +39,18 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
       const headers = token ? { 'Authorization': `Bearer ${token}` } : undefined;
 
       const [statsResponse, serversResponse, agentsResponse] = await Promise.all([
-        fetch('/api/dashboard/stats', { headers }),
-        fetch('/api/servers', { headers }),
-        fetch('/api/agents', { headers })
+        fetch('/api/dashboard/stats', { 
+          headers,
+          cache: 'no-store'
+        }),
+        fetch('/api/servers', { 
+          headers,
+          cache: 'no-store'
+        }),
+        fetch('/api/agents', { 
+          headers,
+          cache: 'no-store'
+        })
       ]);
 
       if (statsResponse.ok) {

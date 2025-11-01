@@ -32,6 +32,7 @@ interface ChartData {
   serverColor: string;
   errorMessage?: string;
   serverId?: number;
+  uniqueId?: string; // Unique identifier for React keys
 }
 
 interface DestinationServer {
@@ -292,17 +293,29 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
         
         // Convert to chart data and sort by original time (not formatted string)
         const allData: ChartData[] = data.monitoringData
-          .map((item: any) => ({
-            time: formatChartTime(item.checked_at),
-            status: item.status,
-            responseTime: item.response_time ? parseFloat(item.response_time) : null,
-            serverName: item.server_name,
-            serverColor: item.server_color,
-            errorMessage: item.error_message,
-            serverId: item.server_id, // Add server ID for filtering
-            originalTime: new Date(item.checked_at).getTime() // Store original timestamp for sorting
-          }))
-          .sort((a: any, b: any) => a.originalTime - b.originalTime)
+          .map((item: any, idx: number) => {
+            const originalTime = new Date(item.checked_at).getTime();
+            // Create unique ID using timestamp + serverId + index to ensure uniqueness
+            const uniqueId = `${originalTime}-${item.server_id || idx}-${item.id || idx}`;
+            return {
+              time: formatChartTime(item.checked_at),
+              status: item.status,
+              responseTime: item.response_time ? parseFloat(item.response_time) : null,
+              serverName: item.server_name,
+              serverColor: item.server_color,
+              errorMessage: item.error_message,
+              serverId: item.server_id, // Add server ID for filtering
+              uniqueId: uniqueId, // Unique identifier for React keys
+              originalTime: originalTime // Store original timestamp for sorting
+            };
+          })
+          .sort((a: any, b: any) => {
+            // First sort by time, then by serverId to ensure consistent ordering
+            if (a.originalTime !== b.originalTime) {
+              return a.originalTime - b.originalTime;
+            }
+            return (a.serverId || 0) - (b.serverId || 0);
+          })
           .map(({ originalTime, ...item }: ChartData & { originalTime: number }) => item); // Remove originalTime after sorting
         
         // Filter to only show disruptions (down, timeout, error status) for candles
@@ -359,16 +372,50 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
   // Apply filter when selected servers or filteredChartData changes
   // Update chartData (candles) to show only disruptions from filteredChartData
   useEffect(() => {
-    if (filteredChartData.length >= 0) {
-      // Filter to only show disruptions (down, timeout, error status) for candles
-      // Use filteredChartData (which already respects server filter)
-      const disruptionsData = filteredChartData.filter(item => 
-        ['down', 'timeout', 'error'].includes(item.status)
-      );
-      setChartData(disruptionsData);
+    // Filter to only show disruptions (down, timeout, error status) for candles
+    // Use filteredChartData (which already respects server filter)
+    const disruptionsData = filteredChartData.filter(item => 
+      ['down', 'timeout', 'error'].includes(item.status)
+    );
+    
+    // Debug: Log the count to verify all disruptions are included
+    if (disruptionsData.length > 0) {
+      console.log(`[${agent.name}] Setting chartData: ${disruptionsData.length} disruptions found`);
     }
-  }, [filteredChartData]);
+    
+    setChartData(disruptionsData);
+  }, [filteredChartData, agent.name]);
 
+  // Verify that all candles are rendered when scroll is enabled
+  useEffect(() => {
+    if (chartData.length > 0 && chartContainerRef.current) {
+      // Use setTimeout to check after render
+      const timer = setTimeout(() => {
+        const container = chartContainerRef.current;
+        if (container) {
+          const innerDiv = container.querySelector('div[style*="flex"]') as HTMLElement;
+          if (innerDiv) {
+            const renderedCandles = innerDiv.children.length;
+            const expectedCandles = chartData.length;
+            const containerWidth = innerDiv.offsetWidth;
+            const calculatedWidth = chartData.length * 9 + (chartData.length - 1) * 1;
+            
+            if (renderedCandles !== expectedCandles) {
+              console.warn(`[${agent.name}] Mismatch: Expected ${expectedCandles} candles, but ${renderedCandles} were rendered`);
+            } else {
+              console.log(`[${agent.name}] ✓ All ${renderedCandles} candles rendered successfully`);
+            }
+            
+            if (containerWidth !== calculatedWidth) {
+              console.warn(`[${agent.name}] Width mismatch: Expected ${calculatedWidth}px, but container is ${containerWidth}px`);
+            }
+          }
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [chartData.length, agent.name]);
 
   // Memoized computed values for better performance
   // Use filteredChartData (which respects server filter) for all calculations
@@ -556,7 +603,7 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
                 const MIN_CANDLE_WIDTH = 8;
                 const MAX_CANDLE_WIDTH = 10;
                 const FIXED_CANDLE_WIDTH = 9; // Fixed width when scroll is enabled
-                const GAP_WIDTH = 1;
+                const GAP_WIDTH = 3; // Gap between candles (increased to 3px for better visibility)
                 
                 // Enable scroll based on:
                 // - Single chart mode: if candles > 180
@@ -578,29 +625,49 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
                 
                 const shouldEnableScroll = shouldEnableScrollByCount || shouldEnableScrollByWidth;
                 
+                // Calculate exact width needed for all candles when scroll is enabled
+                // Formula: (number of candles * candle width) + (number of gaps * gap width)
+                // For gaps: if we have N candles, we have (N-1) gaps between them
+                const totalCandlesWidth = chartData.length * FIXED_CANDLE_WIDTH;
+                const totalGapsWidth = chartData.length > 0 ? (chartData.length - 1) * GAP_WIDTH : 0;
+                const exactContainerWidth = totalCandlesWidth + totalGapsWidth;
+                
                 return (
                   <>
                     <div 
                       ref={chartContainerRef}
                       className={`${shouldEnableScroll ? 'chart-scrollable overflow-x-auto' : 'overflow-hidden'} overflow-y-visible`}
                       style={{
-                        scrollBehavior: shouldEnableScroll ? 'smooth' : undefined
+                        scrollBehavior: shouldEnableScroll ? 'smooth' : undefined,
+                        width: '100%',
+                        maxWidth: '100%'
                       }}
                     >
                       <div 
-                        className={`flex items-end gap-1 h-20 ${!shouldEnableScroll ? 'w-full' : ''}`}
+                        className={`flex items-end h-20 ${!shouldEnableScroll ? 'w-full' : ''}`}
                         style={{
-                          minWidth: shouldEnableScroll 
-                            ? `${chartData.length * FIXED_CANDLE_WIDTH + (chartData.length - 1) * GAP_WIDTH}px` 
-                            : undefined,
-                          direction: 'ltr'
+                          width: shouldEnableScroll ? `${exactContainerWidth}px` : undefined,
+                          minWidth: shouldEnableScroll ? `${exactContainerWidth}px` : undefined,
+                          maxWidth: shouldEnableScroll ? `${exactContainerWidth}px` : undefined,
+                          direction: 'ltr',
+                          flexShrink: 0,
+                          flexWrap: 'nowrap',
+                          display: 'flex',
+                          boxSizing: 'border-box'
                         }}
                       >
-                        {chartData.map((item, index) => {
-                          // Calculate candle width
-                          // When scroll is enabled, use fixed width (9px)
-                          // When scroll is disabled, calculate to fit in container but ensure 8-10px range
-                          let candleWidth: number;
+                        {(() => {
+                          // Debug: Log when rendering candles
+                          if (shouldEnableScroll && chartData.length > 0) {
+                            console.log(`[${agent.name}] Rendering ${chartData.length} candles with scroll enabled`);
+                            console.log(`[${agent.name}] Container width: ${exactContainerWidth}px (${chartData.length} candles × ${FIXED_CANDLE_WIDTH}px + ${chartData.length - 1} gaps × ${GAP_WIDTH}px)`);
+                          }
+                          
+                          return chartData.map((item, index) => {
+                            // Calculate candle width
+                            // When scroll is enabled, use fixed width (9px)
+                            // When scroll is disabled, calculate to fit in container but ensure 8-10px range
+                            let candleWidth: number;
                           
                           if (shouldEnableScroll) {
                             candleWidth = FIXED_CANDLE_WIDTH;
@@ -619,22 +686,25 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
                           
                           return (
                             <div
-                              key={`${agent.id}-${item.time}-${index}`}
-                              className="rounded-t cursor-pointer hover:opacity-100 transition-all duration-200"
+                              key={item.uniqueId || `${agent.id}-${item.time}-${item.serverId}-${index}`}
+                              className="rounded-t cursor-pointer hover:opacity-100 transition-all duration-200 flex-shrink-0"
                               style={{
                                 height: `${getBarHeight(item.responseTime || 0)}px`,
                                 backgroundColor: item.serverColor,
                                 opacity: 0.8,
-                                minWidth: `${candleWidth}px`,
                                 width: `${candleWidth}px`,
-                                maxWidth: `${candleWidth}px`
+                                minWidth: `${candleWidth}px`,
+                                maxWidth: `${candleWidth}px`,
+                                flexShrink: 0,
+                                marginRight: index < chartData.length - 1 ? `${GAP_WIDTH}px` : '0px'
                               }}
                               title={`${item.time} - ${item.serverName} - ${statusLabels[item.status]} - ${item.responseTime || 0}ms`}
                               onMouseEnter={(e) => handleMouseEnter(item, e)}
                               onMouseLeave={handleMouseLeave}
                             />
                           );
-                        })}
+                        });
+                        })()}
                       </div>
                     </div>
                     

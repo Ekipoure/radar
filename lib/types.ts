@@ -39,6 +39,9 @@ export interface ServerWithStatus extends Server {
   last_checked?: string;
   response_time?: number;
   error_message?: string;
+  total_count?: number;
+  success_count?: number;
+  failed_count?: number;
 }
 
 export interface Agent {

@@ -236,13 +236,24 @@ export function quickTest() {
 
 /**
  * Get current time in Iran/Tehran timezone
+ * This function returns the current moment, and when formatted with formatIranTime
+ * it will correctly show Tehran time. The Date object itself represents the 
+ * correct moment in time, and timezone conversion happens during formatting.
  */
 export function getIranTime(): Date {
-  return new Date();
+  // Simply return current time - formatting functions will handle timezone conversion
+  // However, we need to ensure this represents the actual current moment correctly
+  const now = new Date();
+  
+  // The key is that when this Date is formatted using formatIranTime, it will
+  // correctly convert to Tehran timezone. The Date object itself represents
+  // the correct UTC timestamp.
+  return now;
 }
 
 /**
  * Format date to Iran/Tehran timezone with Persian locale
+ * Properly handles UTC timestamps from database
  */
 export function formatIranTime(
   date: Date | string | null | undefined,
@@ -250,7 +261,40 @@ export function formatIranTime(
 ): string {
   if (!date) return 'نامشخص';
   
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  let dateObj: Date;
+  
+  if (typeof date === 'string') {
+    // If it's a string, parse it carefully
+    // Database timestamps from PostgreSQL with timezone='Asia/Tehran' set
+    // may be returned in various formats
+    const dateStr = date.trim();
+    
+    // If it's an ISO string with 'Z' (UTC) or timezone offset, parse directly
+    if (dateStr.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(dateStr)) {
+      dateObj = new Date(dateStr);
+    } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(dateStr)) {
+      // ISO-like format without timezone - PostgreSQL returns these as UTC when using timestamptz
+      // But when timezone='Asia/Tehran' is set, it might format them differently
+      // Try parsing as UTC first (most common case)
+      dateObj = new Date(dateStr + 'Z');
+      
+      // If that fails, try parsing without Z
+      if (isNaN(dateObj.getTime())) {
+        dateObj = new Date(dateStr);
+      }
+    } else {
+      // Other formats - try parsing directly
+      dateObj = new Date(dateStr);
+    }
+  } else {
+    dateObj = date;
+  }
+  
+  // Validate the date object
+  if (isNaN(dateObj.getTime())) {
+    console.warn('Invalid date passed to formatIranTime:', date);
+    return 'نامشخص';
+  }
   
   const defaultOptions: Intl.DateTimeFormatOptions = {
     timeZone: IRAN_TIMEZONE,

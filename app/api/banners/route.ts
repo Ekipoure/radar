@@ -59,6 +59,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate speed: must be between 3 and 30 (matching frontend and database constraint)
+    if (speed < 3 || speed > 30) {
+      return NextResponse.json(
+        { error: 'سرعت باید بین 3 تا 30 ثانیه باشد' },
+        { status: 400 }
+      );
+    }
+
     const client = await pool.connect();
     
     try {

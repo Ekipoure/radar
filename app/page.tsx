@@ -103,7 +103,11 @@ export default function Home() {
           setLoading(true);
         }
         
-        const agentsResponse = await fetch('/api/agents/monitoring');
+        // Use cache: 'no-store' to prevent Next.js from caching responses in production
+        // This ensures new agents appear immediately without requiring a rebuild
+        const agentsResponse = await fetch('/api/agents/monitoring', {
+          cache: 'no-store'
+        });
         
         console.log('Agents API response status:', agentsResponse.status);
         if (agentsResponse.ok) {
@@ -148,7 +152,10 @@ export default function Home() {
     if (!isInitialLoad && agents.length > 0) {
       const fetchData = async () => {
         try {
-          const agentsResponse = await fetch('/api/agents/monitoring');
+          // Use cache: 'no-store' to prevent Next.js from caching responses in production
+          const agentsResponse = await fetch('/api/agents/monitoring', {
+            cache: 'no-store'
+          });
           
           if (agentsResponse.ok) {
             const data = await agentsResponse.json();
