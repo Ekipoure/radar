@@ -186,7 +186,7 @@ export default function SiteIdentityModal({ isOpen, onClose, onUpdated }: SiteId
                       type="text"
                       id="header_title"
                       name="header_title"
-                      value={formData.header_title}
+                      value={formData.header_title || ''}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
                       placeholder="رادار مانیتورینگ"
@@ -202,7 +202,7 @@ export default function SiteIdentityModal({ isOpen, onClose, onUpdated }: SiteId
                       type="text"
                       id="header_subtitle"
                       name="header_subtitle"
-                      value={formData.header_subtitle}
+                      value={formData.header_subtitle || ''}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
                       placeholder="سیستم نظارت بر سرورها"
@@ -218,7 +218,7 @@ export default function SiteIdentityModal({ isOpen, onClose, onUpdated }: SiteId
                       type="text"
                       id="header_tagline"
                       name="header_tagline"
-                      value={formData.header_tagline}
+                      value={formData.header_tagline || ''}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
                       placeholder="پایش هوشمند، تصمیم مطمئن"
@@ -256,7 +256,7 @@ export default function SiteIdentityModal({ isOpen, onClose, onUpdated }: SiteId
                     id="footer_text"
                     name="footer_text"
                     rows={3}
-                    value={formData.footer_text}
+                    value={formData.footer_text || ''}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm resize-none"
                     placeholder="© ۱۴۰۳ سیستم رادار مانیتورینگ. تمامی حقوق محفوظ است."
