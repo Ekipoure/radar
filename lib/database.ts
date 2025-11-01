@@ -27,6 +27,13 @@ export async function initializeDatabase() {
   try {
     // Set timezone to Iran/Tehran for this session
     await client.query("SET timezone = 'Asia/Tehran'");
+    
+    // Log environment info for debugging
+    console.log('📊 Initializing database...', {
+      nodeEnv: process.env.NODE_ENV,
+      nextPhase: process.env.NEXT_PHASE,
+      isBuild: process.argv.includes('build')
+    });
     // Create users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -64,24 +71,66 @@ export async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#3B82F6'
     `);
 
-    // Add source_ip column to existing monitoring_data table if it doesn't exist
-    await client.query(`
-      ALTER TABLE monitoring_data 
-      ADD COLUMN IF NOT EXISTS source_ip VARCHAR(45)
-    `);
-
-    // Create monitoring_data table for historical data
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS monitoring_data (
-        id SERIAL PRIMARY KEY,
-        server_id INTEGER REFERENCES servers(id) ON DELETE CASCADE,
-        source_ip VARCHAR(45),
-        status VARCHAR(20) NOT NULL,
-        response_time INTEGER,
-        error_message TEXT,
-        checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    // Create monitoring_data table for historical data FIRST
+    // Check if table already exists to avoid recreating constraints
+    const tableExists = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'monitoring_data'
       )
     `);
+
+    let recordCountBefore = 0;
+    if (tableExists.rows[0].exists) {
+      // Table exists, count records before any operations
+      const countResult = await client.query('SELECT COUNT(*) as count FROM monitoring_data');
+      recordCountBefore = parseInt(countResult.rows[0].count);
+      console.log(`⚠️  monitoring_data table exists with ${recordCountBefore} records - will preserve all data`);
+    }
+
+    if (!tableExists.rows[0].exists) {
+      // Table doesn't exist, create it
+      await client.query(`
+        CREATE TABLE monitoring_data (
+          id SERIAL PRIMARY KEY,
+          server_id INTEGER REFERENCES servers(id) ON DELETE CASCADE,
+          source_ip VARCHAR(45),
+          status VARCHAR(20) NOT NULL,
+          response_time INTEGER,
+          error_message TEXT,
+          checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ Created monitoring_data table');
+    } else {
+      // Table exists, only add missing columns if needed
+      console.log('✅ monitoring_data table already exists, checking for missing columns...');
+    }
+
+    // Add source_ip column to existing monitoring_data table if it doesn't exist
+    // This must run AFTER the table exists (either created above or already existed)
+    try {
+      // Check if column exists first
+      const columnExists = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'monitoring_data' 
+        AND column_name = 'source_ip'
+      `);
+
+      if (columnExists.rows.length === 0) {
+        await client.query(`
+          ALTER TABLE monitoring_data 
+          ADD COLUMN source_ip VARCHAR(45)
+        `);
+        console.log('Added source_ip column to monitoring_data table');
+      }
+    } catch (error) {
+      // Column might already exist or other error
+      console.log('Warning: Could not add source_ip column to monitoring_data:', error instanceof Error ? error.message : 'Unknown error');
+    }
 
     // Add constraint to monitoring_data table
     try {
@@ -364,7 +413,19 @@ export async function initializeDatabase() {
       );
     }
 
-    console.log('Database initialized successfully');
+    // Verify data integrity after initialization
+    if (tableExists.rows[0].exists && recordCountBefore > 0) {
+      const countResultAfter = await client.query('SELECT COUNT(*) as count FROM monitoring_data');
+      const recordCountAfter = parseInt(countResultAfter.rows[0].count);
+      
+      if (recordCountAfter !== recordCountBefore) {
+        console.error(`❌ CRITICAL: Record count changed from ${recordCountBefore} to ${recordCountAfter}! Data may have been lost!`);
+      } else {
+        console.log(`✅ Data integrity verified: ${recordCountAfter} records preserved`);
+      }
+    }
+
+    console.log('✅ Database initialized successfully');
   } catch (error) {
     console.error('Error initializing database:', error);
     throw error;

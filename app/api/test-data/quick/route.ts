@@ -1,7 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
 
+// Force dynamic rendering to prevent execution during build
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
+  // CRITICAL: Prevent execution during build time
+  // Next.js may execute GET routes during static generation
+  // Check multiple indicators of build time
+  const buildIndicators = [
+    process.env.NEXT_PHASE === 'phase-production-build',
+    process.env.NEXT_PHASE === 'phase-export',
+    process.argv.includes('build') && process.env.NODE_ENV === 'production',
+    process.env.NEXT_BUILD === 'true',
+    // During build, Next.js may not set proper headers or URL
+    (!request.url || request.url.includes('/_next/') || !request.url.startsWith('http')),
+  ];
+  
+  if (buildIndicators.some(Boolean)) {
+    console.warn('⚠️  BLOCKED: test-data/quick endpoint called during build time!');
+    console.warn('⚠️  This endpoint would have DELETED all monitoring_data records!');
+    console.warn('⚠️  Build indicators:', {
+      NEXT_PHASE: process.env.NEXT_PHASE,
+      NODE_ENV: process.env.NODE_ENV,
+      argv: process.argv,
+      url: request.url,
+    });
+    // Return empty response to prevent execution
+    return new NextResponse(null, { status: 503 });
+  }
   try {
     const client = await pool.connect();
     

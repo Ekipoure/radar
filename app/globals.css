@@ -106,6 +106,30 @@
     text-align: left;
     direction: ltr;
   }
+  
+  /* Custom scrollbar for chart containers */
+  .chart-scrollable {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(209 213 219) rgb(243 244 246);
+  }
+  
+  .chart-scrollable::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  .chart-scrollable::-webkit-scrollbar-track {
+    background: rgb(243 244 246);
+    border-radius: 4px;
+  }
+  
+  .chart-scrollable::-webkit-scrollbar-thumb {
+    background: rgb(209 213 219);
+    border-radius: 4px;
+  }
+  
+  .chart-scrollable::-webkit-scrollbar-thumb:hover {
+    background: rgb(156 163 175);
+  }
 }
 
 @layer utilities {

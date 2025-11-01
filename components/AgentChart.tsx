@@ -21,6 +21,7 @@ interface AgentChartProps {
   className?: string;
   selectedServers?: number[];
   dateTimeFilter?: { date: string; timeRange: string } | null;
+  chartDisplayMode?: 'single' | 'dual';
 }
 
 interface ChartData {
@@ -55,7 +56,7 @@ const statusLabels = {
   skipped: 'رد شده'
 };
 
-function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilter = null }: AgentChartProps) {
+function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilter = null, chartDisplayMode = 'dual' }: AgentChartProps) {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [allChartData, setAllChartData] = useState<ChartData[]>([]);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -63,7 +64,20 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
   const [globalDisruptionCount, setGlobalDisruptionCount] = useState<number>(0);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   const allChartDataRef = useRef<ChartData[]>([]);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  // Detect mobile/desktop
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint in Tailwind
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   // Update current time every minute
   useEffect(() => {
@@ -75,12 +89,18 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch global disruption count from dashboard stats
+  // Fetch global disruption count from dashboard stats (optional - only if authenticated)
+  // If not authenticated, we'll use local data instead
   const fetchGlobalDisruptionCount = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : undefined;
+      if (!token) {
+        // If not authenticated, calculate from local data instead
+        // This allows the page to work without login
+        return;
+      }
       
+      const headers = { 'Authorization': `Bearer ${token}` };
       const response = await fetch('/api/dashboard/stats', { headers });
       if (response.ok) {
         const data = await response.json();
@@ -89,6 +109,7 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
       }
     } catch (error) {
       console.error('Error fetching global disruption count:', error);
+      // Silently fail - we'll use local data instead
     }
   }, []);
 
@@ -354,12 +375,13 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
     }
     
     // When no datetime filter, count disruptions from filtered data
-    // But if no servers selected, we might want to show global count
-    if (selectedServers.length === 0) {
+    // If no servers selected and we have global count (user is authenticated), show global count
+    // Otherwise, count from filtered data (works for unauthenticated users too)
+    if (selectedServers.length === 0 && globalDisruptionCount > 0) {
       return globalDisruptionCount;
     }
     
-    // Count disruptions from filtered data
+    // Count disruptions from filtered data (works for both authenticated and unauthenticated users)
     return filteredChartData.filter(item => 
       ['down', 'timeout', 'error'].includes(item.status)
     ).length;
@@ -495,22 +517,62 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
           </div>
         ) : (
           <div className="space-y-2">
-            {/* Chart Bars - Show all disruptions (not just 'down' status) with server color */}
-            <div className="flex items-end gap-1 h-20">
-              {chartData.map((item, index) => (
-                <div
-                  key={`${agent.id}-${item.time}-${index}`}
-                  className="flex-1 rounded-t cursor-pointer hover:opacity-100"
-                  style={{
-                    height: `${getBarHeight(item.responseTime || 0)}px`,
-                    backgroundColor: item.serverColor, // Use destination server color for disruptions
-                    opacity: 0.8
-                  }}
-                  title={`${item.time} - ${item.serverName} - ${statusLabels[item.status]} - ${item.responseTime || 0}ms`}
-                  onMouseEnter={(e) => handleMouseEnter(item, e)}
-                  onMouseLeave={handleMouseLeave}
-                />
-              ))}
+            {/* Chart Bars Container - Scrollable only in dual mode or mobile */}
+            <div className="relative">
+              {(() => {
+                // Enable scroll only if:
+                // 1. More than 50 candles AND
+                // 2. (Mobile OR dual mode) - NOT single mode on desktop
+                const shouldEnableScroll = chartData.length > 50 && (isMobile || chartDisplayMode === 'dual');
+                const shouldUseFixedWidth = shouldEnableScroll;
+                const candleWidth = shouldUseFixedWidth ? 4 : undefined;
+                
+                return (
+                  <>
+                    <div 
+                      ref={chartContainerRef}
+                      className={`${shouldEnableScroll ? 'chart-scrollable overflow-x-auto' : 'overflow-hidden'} overflow-y-visible`}
+                      style={{
+                        scrollBehavior: shouldEnableScroll ? 'smooth' : undefined
+                      }}
+                    >
+                      <div 
+                        className={`flex items-end gap-1 h-20 ${!shouldEnableScroll ? 'w-full' : ''}`}
+                        style={{
+                          minWidth: shouldEnableScroll ? `${chartData.length * 4 + (chartData.length - 1) * 4}px` : undefined
+                        }}
+                      >
+                        {chartData.map((item, index) => (
+                          <div
+                            key={`${agent.id}-${item.time}-${index}`}
+                            className={`${!shouldUseFixedWidth ? 'flex-1' : ''} rounded-t cursor-pointer hover:opacity-100 transition-all duration-200`}
+                            style={{
+                              height: `${getBarHeight(item.responseTime || 0)}px`,
+                              backgroundColor: item.serverColor,
+                              opacity: 0.8,
+                              minWidth: candleWidth ? `${candleWidth}px` : undefined,
+                              width: candleWidth ? `${candleWidth}px` : undefined
+                            }}
+                            title={`${item.time} - ${item.serverName} - ${statusLabels[item.status]} - ${item.responseTime || 0}ms`}
+                            onMouseEnter={(e) => handleMouseEnter(item, e)}
+                            onMouseLeave={handleMouseLeave}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Scroll indicator when chart is scrollable */}
+                    {shouldEnableScroll && (
+                      <div className="absolute top-0 right-0 bg-blue-50 text-blue-600 text-[10px] px-2 py-1 rounded-br-lg rounded-bl-lg border border-blue-200 flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                        </svg>
+                        <span>اسکرول کنید ({chartData.length} کندل)</span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             
             {/* Time Labels */}

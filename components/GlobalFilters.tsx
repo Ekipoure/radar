@@ -21,11 +21,11 @@ export default function GlobalFilters({
 }: GlobalFiltersProps) {
   const [destinationServers, setDestinationServers] = useState<DestinationServer[]>([]);
 
-  // Fetch destination servers
+  // Fetch destination servers from public API (no authentication required)
   useEffect(() => {
     const fetchDestinationServers = async () => {
       try {
-        const response = await fetch('/api/servers');
+        const response = await fetch('/api/public/servers');
         if (response.ok) {
           const data = await response.json();
           const servers: DestinationServer[] = data.servers.map((server: any) => ({

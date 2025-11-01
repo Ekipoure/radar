@@ -491,6 +491,7 @@ export default function Home() {
                     agent={agent} 
                     selectedServers={globalSelectedServers}
                     dateTimeFilter={dateTimeFilter}
+                    chartDisplayMode={chartDisplayMode}
                   />
                 ) : (
                   <div key={agent.id} className="bg-white rounded-xl shadow-lg p-6">

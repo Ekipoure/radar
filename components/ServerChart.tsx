@@ -41,6 +41,7 @@ function ServerChart({ server, className = '', dateTimeFilter = null }: ServerCh
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const allChartDataRef = useRef<ChartData[]>([]);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
 
   // Update current time every minute
   useEffect(() => {
@@ -256,20 +257,53 @@ function ServerChart({ server, className = '', dateTimeFilter = null }: ServerCh
           </div>
         ) : (
           <div className="space-y-2">
-            {/* Chart Bars - Only show disruptions (down status) with server color */}
-            <div className="flex items-end gap-1 h-20">
-              {chartData.map((item, index) => (
-                <div
-                  key={`${server.id}-${item.time}-${index}`}
-                  className="flex-1 rounded-t"
+            {/* Chart Bars Container - Scrollable when too many candles */}
+            <div className="relative">
+              <div 
+                ref={chartContainerRef}
+                className="chart-scrollable overflow-x-auto overflow-y-visible"
+                style={{
+                  scrollBehavior: 'smooth'
+                }}
+              >
+                <div 
+                  className={`flex items-end gap-1 h-20 ${chartData.length <= 50 ? 'w-full' : ''}`}
                   style={{
-                    height: `${getBarHeight(item.responseTime || 0)}px`,
-                    backgroundColor: server.color, // Use server color for disruptions
-                    opacity: 0.8
+                    minWidth: chartData.length > 50 ? `${chartData.length * 4 + (chartData.length - 1) * 4}px` : undefined
                   }}
-                  title={`${item.time} - ${statusLabels[item.status]} - ${item.responseTime || 0}ms`}
-                />
-              ))}
+                >
+                  {chartData.map((item, index) => {
+                    // If more than 50 candles, use fixed width (4px for better visibility), otherwise use flex-1
+                    const shouldUseFixedWidth = chartData.length > 50;
+                    const candleWidth = shouldUseFixedWidth ? 4 : undefined;
+                    
+                    return (
+                      <div
+                        key={`${server.id}-${item.time}-${index}`}
+                        className={`${shouldUseFixedWidth ? '' : 'flex-1'} rounded-t cursor-pointer hover:opacity-100 transition-all duration-200`}
+                        style={{
+                          height: `${getBarHeight(item.responseTime || 0)}px`,
+                          backgroundColor: server.color,
+                          opacity: 0.8,
+                          minWidth: candleWidth ? `${candleWidth}px` : undefined,
+                          width: candleWidth ? `${candleWidth}px` : undefined
+                        }}
+                        title={`${item.time} - ${statusLabels[item.status]} - ${item.responseTime || 0}ms`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {/* Scroll indicator when chart is scrollable */}
+              {chartData.length > 50 && (
+                <div className="absolute top-0 right-0 bg-blue-50 text-blue-600 text-[10px] px-2 py-1 rounded-br-lg rounded-bl-lg border border-blue-200 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                  </svg>
+                  <span>اسکرول کنید ({chartData.length} کندل)</span>
+                </div>
+              )}
             </div>
             
             {/* Time Labels */}
