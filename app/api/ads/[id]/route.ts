@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
-import { verifyToken } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth-middleware';
 import { UpdateAdData } from '@/lib/types';
 
 // GET /api/ads/[id] - Get a specific ad
@@ -9,6 +9,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Verify authentication
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
+    }
+
     const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json(
@@ -43,20 +49,9 @@ export async function PUT(
 ) {
   try {
     // Verify authentication
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const id = parseInt(params.id);
@@ -157,20 +152,9 @@ export async function DELETE(
 ) {
   try {
     // Verify authentication
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const id = parseInt(params.id);

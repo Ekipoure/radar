@@ -9,6 +9,14 @@ import DateTimeFilterModal from '@/components/DateTimeFilterModal';
 import { Agent } from '@/lib/types';
 import { formatHeaderTime, formatTableTime, getIranTime, persianToGregorian } from '@/lib/timezone';
 
+interface SiteSettings {
+  header_title: string | null;
+  header_subtitle: string | null;
+  header_tagline: string | null;
+  footer_text: string | null;
+  footer_enabled: boolean;
+}
+
 export default function Home() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +26,15 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // Site settings state
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>({
+    header_title: 'رادار مانیتورینگ',
+    header_subtitle: 'سیستم نظارت بر سرورها',
+    header_tagline: 'پایش هوشمند، تصمیم مطمئن',
+    footer_text: '© ۱۴۰۳ سیستم رادار مانیتورینگ. تمامی حقوق محفوظ است.',
+    footer_enabled: true
+  });
   
   // Global filter state
   const [globalSelectedServers, setGlobalSelectedServers] = useState<number[]>([]);
@@ -39,6 +56,22 @@ export default function Home() {
       setCurrentTime(getIranTime());
     }, 60000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Fetch site settings
+  useEffect(() => {
+    const fetchSiteSettings = async () => {
+      try {
+        const response = await fetch('/api/site-settings');
+        if (response.ok) {
+          const data = await response.json();
+          setSiteSettings(data.settings);
+        }
+      } catch (error) {
+        console.error('Error fetching site settings:', error);
+      }
+    };
+    fetchSiteSettings();
   }, []);
 
   useEffect(() => {
@@ -268,15 +301,23 @@ export default function Home() {
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">رادار مانیتورینگ</h1>
-                <p className="text-xs sm:text-sm text-gray-600">سیستم نظارت بر سرورها</p>
+                {siteSettings.header_title && (
+                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">
+                    {siteSettings.header_title}
+                  </h1>
+                )}
+                {siteSettings.header_subtitle && (
+                  <p className="text-xs sm:text-sm text-gray-600">{siteSettings.header_subtitle}</p>
+                )}
               </div>
             </div>
             
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-              <div className="text-xs sm:text-sm text-gray-700 order-2 sm:order-1">
-                <span className="whitespace-nowrap">پایش هوشمند، تصمیم مطمئن</span>
-              </div>
+              {siteSettings.header_tagline && (
+                <div className="text-xs sm:text-sm text-gray-700 order-2 sm:order-1">
+                  <span className="whitespace-nowrap">{siteSettings.header_tagline}</span>
+                </div>
+              )}
               <Link
                 href="/dashboard"
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl whitespace-nowrap order-1 sm:order-2 w-full sm:w-auto text-center"
@@ -510,13 +551,15 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white/80 backdrop-blur-sm border-t mt-16">
-        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-gray-500">
-            <p>&copy; ۱۴۰۳ سیستم رادار مانیتورینگ. تمامی حقوق محفوظ است.</p>
+      {siteSettings.footer_enabled && siteSettings.footer_text && (
+        <footer className="bg-white/80 backdrop-blur-sm border-t mt-16">
+          <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div className="text-center text-gray-500">
+              <p>{siteSettings.footer_text}</p>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
       {/* Date/Time Filter Modal */}
       <DateTimeFilterModal

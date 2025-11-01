@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
 import { UpdateAgentData } from '@/lib/types';
-import { verifyToken } from '@/lib/auth';
-
-function getAuthToken(request: NextRequest): string | null {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  return null;
-}
+import { requireAuth } from '@/lib/auth-middleware';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = getAuthToken(request);
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const agentId = parseInt(params.id);
@@ -108,9 +100,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = getAuthToken(request);
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const agentId = parseInt(params.id);

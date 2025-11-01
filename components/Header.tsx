@@ -8,9 +8,10 @@ interface HeaderProps {
   onDeploy: () => void;
   onAddAd: () => void;
   onAddBanner: () => void;
+  onSiteIdentity?: () => void;
 }
 
-export default function Header({ onLogout, onAddServer, onDeploy, onAddAd, onAddBanner }: HeaderProps) {
+export default function Header({ onLogout, onAddServer, onDeploy, onAddAd, onAddBanner, onSiteIdentity }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -80,6 +81,20 @@ export default function Header({ onLogout, onAddServer, onDeploy, onAddAd, onAdd
               {showActionMenu && (
                 <div className="origin-top-right absolute right-0 mt-2 w-48 sm:w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
                   <div className="py-2">
+                    {onSiteIdentity && (
+                      <button
+                        onClick={() => {
+                          onSiteIdentity();
+                          setShowActionMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200 border-b border-gray-100"
+                      >
+                        <svg className="h-5 w-5 mr-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                        </svg>
+                        <span>هویت سایت</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         onAddServer();

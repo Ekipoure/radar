@@ -92,6 +92,44 @@ export async function getServersForMonitoring(): Promise<Server[]> {
   return []; // Return empty array - no servers to monitor
 }
 
+/**
+ * Process monitoring data to apply consecutive timeout logic for servers
+ * If a server has N consecutive timeouts, the next record should be marked as 'down'
+ */
+function applyConsecutiveTimeoutLogic(
+  data: MonitoringData[],
+  timeoutCount: number
+): MonitoringData[] {
+  if (!data || data.length === 0 || timeoutCount <= 0) {
+    return data;
+  }
+
+  const processed = [...data];
+  
+  for (let i = 0; i < processed.length; i++) {
+    // Count consecutive timeouts before this record (use original data, not processed)
+    let consecutiveTimeouts = 0;
+    for (let j = i - 1; j >= 0; j--) {
+      // Check original status before processing
+      if (data[j].status === 'timeout') {
+        consecutiveTimeouts++;
+      } else {
+        break; // Stop counting if we hit a non-timeout
+      }
+    }
+    
+    // If we have enough consecutive timeouts, mark this record as 'down'
+    if (consecutiveTimeouts >= timeoutCount) {
+      processed[i] = {
+        ...processed[i],
+        status: 'down'
+      };
+    }
+  }
+  
+  return processed;
+}
+
 export async function getMonitoringHistory(
   serverId: number, 
   hours: number = 24
@@ -100,16 +138,26 @@ export async function getMonitoringHistory(
     const client = await pool.connect();
     
     try {
+      // Get server's timeout_count first
+      const serverResult = await client.query(
+        'SELECT timeout_count FROM servers WHERE id = $1',
+        [serverId]
+      );
+      
+      const timeoutCount = serverResult.rows[0]?.timeout_count || 3;
+      
       // Optimized query with better indexing and limit
       const result = await client.query(
         `SELECT id, server_id, source_ip, status, response_time, error_message, checked_at 
          FROM monitoring_data 
          WHERE server_id = $1 AND checked_at >= NOW() - INTERVAL '${hours} hours'
-         ORDER BY checked_at DESC
+         ORDER BY checked_at ASC
          LIMIT 1000`,
         [serverId]
       );
-      return result.rows;
+      
+      // Apply consecutive timeout logic
+      return applyConsecutiveTimeoutLogic(result.rows, timeoutCount);
     } finally {
       client.release();
     }
@@ -125,6 +173,14 @@ export async function getMonitoringHistoryByDateRange(
     const client = await pool.connect();
     
     try {
+      // Get server's timeout_count first
+      const serverResult = await client.query(
+        'SELECT timeout_count FROM servers WHERE id = $1',
+        [serverId]
+      );
+      
+      const timeoutCount = serverResult.rows[0]?.timeout_count || 3;
+      
       // Query with specific date/time range
       const result = await client.query(
         `SELECT id, server_id, source_ip, status, response_time, error_message, checked_at 
@@ -132,11 +188,13 @@ export async function getMonitoringHistoryByDateRange(
          WHERE server_id = $1 
          AND checked_at >= $2 
          AND checked_at <= $3
-         ORDER BY checked_at DESC
+         ORDER BY checked_at ASC
          LIMIT 1000`,
         [serverId, startDateTime, endDateTime]
       );
-      return result.rows;
+      
+      // Apply consecutive timeout logic
+      return applyConsecutiveTimeoutLogic(result.rows, timeoutCount);
     } finally {
       client.release();
     }
@@ -158,7 +216,7 @@ export async function getMonitoringDataBySource(
          FROM monitoring_data md
          JOIN servers s ON md.server_id = s.id
          WHERE md.source_ip = $1 AND md.checked_at >= NOW() - INTERVAL '${hours} hours'
-         ORDER BY md.checked_at DESC`,
+         ORDER BY md.checked_at ASC`,
         [sourceIp]
       );
       return result.rows;
@@ -186,7 +244,7 @@ export async function getMonitoringDataBySourceWithDateRange(
          WHERE md.source_ip = $1 
          AND md.checked_at >= $2 
          AND md.checked_at <= $3
-         ORDER BY md.checked_at DESC`,
+         ORDER BY md.checked_at ASC`,
         [sourceIp, startDateTime, endDateTime]
       );
       return result.rows;

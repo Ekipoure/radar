@@ -18,6 +18,7 @@ export default function AddServerModal({ onClose, onServerAdded }: AddServerModa
     expected_status_code: 200,
     check_interval: 60,
     timeout: 5000,
+    timeout_count: 3,
     server_group: 'iranian',
     color: '#3B82F6'
   });
@@ -304,6 +305,27 @@ export default function AddServerModal({ onClose, onServerAdded }: AddServerModa
                 onChange={handleChange}
                 placeholder="e.g., 5000"
               />
+            </div>
+
+            <div>
+              <label htmlFor="timeout_count" className="block text-sm font-medium text-gray-700">
+                تعداد تایم‌اوت متوالی برای آفلاین شدن *
+              </label>
+              <input
+                type="number"
+                id="timeout_count"
+                name="timeout_count"
+                required
+                min="1"
+                max="100"
+                className="input mt-1"
+                value={formData.timeout_count}
+                onChange={handleChange}
+                placeholder="e.g., 10"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                اگر سرور به این تعداد بار به صورت متوالی تایم‌اوت شود، کندل بعدی به عنوان آفلاین تشخیص داده می‌شود
+              </p>
             </div>
 
             {error && (

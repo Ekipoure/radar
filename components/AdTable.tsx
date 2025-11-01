@@ -138,7 +138,7 @@ export default function AdTable({ onAdUpdated, onAdDeleted }: AdTableProps) {
                       <img
                         src={ad.image_url}
                         alt={ad.title}
-                        className="h-12 w-16 object-cover rounded"
+                        className="h-12 w-28 object-cover rounded"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA2NCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAxNkwyOCAyMEwyNCAyNEwyMCAyMEwyNCAxNloiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTQwIDE2TDQ0IDIwTDQwIDI0TDM2IDIwTDQwIDE2WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMjQgMzJMMjggMzZMMjQgNDBMMjAgMzZMMjQgMzJaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik00MCAzMkw0NCAzNkw0MCA0MEwzNiAzNkw0MCAzMloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';

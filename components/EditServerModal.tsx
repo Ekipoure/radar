@@ -25,6 +25,7 @@ export default function EditServerModal({ server, onClose, onServerUpdated }: Ed
         expected_status_code: server.expected_status_code,
         check_interval: server.check_interval,
         timeout: server.timeout,
+        timeout_count: server.timeout_count || 3,
         server_group: server.server_group,
         color: server.color,
         is_active: server.is_active
@@ -233,6 +234,27 @@ export default function EditServerModal({ server, onClose, onServerUpdated }: Ed
                 onChange={handleChange}
                 placeholder="5000"
               />
+            </div>
+
+            <div>
+              <label htmlFor="timeout_count" className="block text-sm font-medium text-gray-700">
+                تعداد تایم‌اوت متوالی برای آفلاین شدن *
+              </label>
+              <input
+                type="number"
+                id="timeout_count"
+                name="timeout_count"
+                required
+                min="1"
+                max="100"
+                className="input mt-1"
+                value={formData.timeout_count || 3}
+                onChange={handleChange}
+                placeholder="e.g., 10"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                اگر سرور به این تعداد بار به صورت متوالی تایم‌اوت شود، کندل بعدی به عنوان آفلاین تشخیص داده می‌شود
+              </p>
             </div>
 
             <div>

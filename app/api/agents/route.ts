@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
 import { Agent, CreateAgentData } from '@/lib/types';
-import { verifyToken } from '@/lib/auth';
-
-function getAuthToken(request: NextRequest): string | null {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  return null;
-}
+import { requireAuth } from '@/lib/auth-middleware';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = getAuthToken(request);
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const client = await pool.connect();
@@ -42,9 +34,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = getAuthToken(request);
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const agentData: CreateAgentData = await request.json();

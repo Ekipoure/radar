@@ -16,6 +16,7 @@ export interface Server {
   expected_status_code?: number;
   check_interval: number;
   timeout: number;
+  timeout_count: number;
   server_group: 'iranian' | 'global';
   color: string;
   is_active: boolean;
@@ -77,6 +78,7 @@ export interface CreateServerData {
   expected_status_code?: number;
   check_interval: number;
   timeout: number;
+  timeout_count: number;
   server_group: 'iranian' | 'global';
   color: string;
 }

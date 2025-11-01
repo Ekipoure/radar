@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface DestinationServer {
   id: number;
@@ -20,6 +20,7 @@ export default function GlobalFilters({
   showServerFilter = true 
 }: GlobalFiltersProps) {
   const [destinationServers, setDestinationServers] = useState<DestinationServer[]>([]);
+  const hasInitializedRef = useRef(false);
 
   // Fetch destination servers from public API (no authentication required)
   useEffect(() => {
@@ -34,10 +35,6 @@ export default function GlobalFilters({
             color: server.color
           }));
           setDestinationServers(servers);
-          // Select all servers by default if none are selected
-          if (selectedServers.length === 0) {
-            onSelectedServersChange(servers.map(s => s.id));
-          }
         }
       } catch (error) {
         console.error('Error fetching destination servers:', error);
@@ -47,7 +44,16 @@ export default function GlobalFilters({
     if (showServerFilter) {
       fetchDestinationServers();
     }
-  }, [showServerFilter, selectedServers.length, onSelectedServersChange]);
+  }, [showServerFilter]);
+
+  // Initialize selection only once when servers are first loaded
+  useEffect(() => {
+    if (destinationServers.length > 0 && !hasInitializedRef.current && selectedServers.length === 0) {
+      hasInitializedRef.current = true;
+      onSelectedServersChange(destinationServers.map(s => s.id));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [destinationServers.length]);
 
   // Handle server selection
   const handleServerToggle = (serverId: number) => {

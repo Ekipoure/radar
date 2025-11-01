@@ -12,6 +12,7 @@ import AddAdModal from './AddAdModal';
 import AdTable from './AdTable';
 import BannerTable from './BannerTable';
 import Header from './Header';
+import SiteIdentityModal from './SiteIdentityModal';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -27,6 +28,7 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeployModal, setShowDeployModal] = useState(false);
   const [showAddAdModal, setShowAddAdModal] = useState(false);
+  const [showSiteIdentityModal, setShowSiteIdentityModal] = useState(false);
   const [triggerAddBannerModal, setTriggerAddBannerModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTable, setActiveTable] = useState<'servers' | 'agents' | 'ads' | 'banners'>('servers');
@@ -130,7 +132,7 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
 
   return (
     <div className="min-h-screen bg-gray-50" dir="ltr">
-      <Header onLogout={onLogout} onAddServer={() => setShowAddModal(true)} onDeploy={handleDeploy} onAddAd={handleAddAd} onAddBanner={handleAddBanner} />
+      <Header onLogout={onLogout} onAddServer={() => setShowAddModal(true)} onDeploy={handleDeploy} onAddAd={handleAddAd} onAddBanner={handleAddBanner} onSiteIdentity={() => setShowSiteIdentityModal(true)} />
       
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {stats && <StatsCards stats={stats} />}
@@ -235,6 +237,14 @@ export default function Dashboard({ onLogout, dateTimeFilter = null }: Dashboard
         <AddAdModal
           onClose={() => setShowAddAdModal(false)}
           onAdAdded={handleAdAdded}
+        />
+      )}
+
+      {showSiteIdentityModal && (
+        <SiteIdentityModal
+          isOpen={showSiteIdentityModal}
+          onClose={() => setShowSiteIdentityModal(false)}
+          onUpdated={() => setRefreshKey(prev => prev + 1)}
         />
       )}
     </div>

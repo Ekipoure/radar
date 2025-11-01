@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
 import { UpdateServerData } from '@/lib/types';
-import { verifyToken } from '@/lib/auth';
-
-function getAuthToken(request: NextRequest): string | null {
-  return request.cookies.get('auth-token')?.value || null;
-}
+import { requireAuth } from '@/lib/auth-middleware';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = getAuthToken(request);
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const client = await pool.connect();
@@ -47,9 +43,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = getAuthToken(request);
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const updateData: UpdateServerData = await request.json();
@@ -105,9 +101,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = getAuthToken(request);
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const client = await pool.connect();

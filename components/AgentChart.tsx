@@ -290,7 +290,7 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
         const data = await response.json();
         console.log(`Received ${data.monitoringData.length} monitoring records for agent ${agent.name}:`, data);
         
-        // Convert to chart data and sort by time
+        // Convert to chart data and sort by original time (not formatted string)
         const allData: ChartData[] = data.monitoringData
           .map((item: any) => ({
             time: formatChartTime(item.checked_at),
@@ -299,9 +299,11 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
             serverName: item.server_name,
             serverColor: item.server_color,
             errorMessage: item.error_message,
-            serverId: item.server_id // Add server ID for filtering
+            serverId: item.server_id, // Add server ID for filtering
+            originalTime: new Date(item.checked_at).getTime() // Store original timestamp for sorting
           }))
-          .sort((a: ChartData, b: ChartData) => new Date(a.time).getTime() - new Date(b.time).getTime());
+          .sort((a: any, b: any) => a.originalTime - b.originalTime)
+          .map(({ originalTime, ...item }: ChartData & { originalTime: number }) => item); // Remove originalTime after sorting
         
         // Filter to only show disruptions (down, timeout, error status) for candles
         const filteredData = allData.filter(item => 
@@ -590,7 +592,8 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
                         style={{
                           minWidth: shouldEnableScroll 
                             ? `${chartData.length * FIXED_CANDLE_WIDTH + (chartData.length - 1) * GAP_WIDTH}px` 
-                            : undefined
+                            : undefined,
+                          direction: 'ltr'
                         }}
                       >
                         {chartData.map((item, index) => {

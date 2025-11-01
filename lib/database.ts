@@ -57,6 +57,7 @@ export async function initializeDatabase() {
         expected_status_code INTEGER,
         check_interval INTEGER NOT NULL DEFAULT 60,
         timeout INTEGER NOT NULL DEFAULT 5000,
+        timeout_count INTEGER NOT NULL DEFAULT 3,
         server_group VARCHAR(20) NOT NULL CHECK (server_group IN ('iranian', 'global')),
         color VARCHAR(7) DEFAULT '#3B82F6',
         is_active BOOLEAN DEFAULT true,
@@ -69,6 +70,12 @@ export async function initializeDatabase() {
     await client.query(`
       ALTER TABLE servers 
       ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#3B82F6'
+    `);
+
+    // Add timeout_count column to existing servers table if it doesn't exist
+    await client.query(`
+      ALTER TABLE servers 
+      ADD COLUMN IF NOT EXISTS timeout_count INTEGER DEFAULT 3
     `);
 
     // Create monitoring_data table for historical data FIRST
@@ -399,6 +406,44 @@ export async function initializeDatabase() {
       `);
     } catch (error) {
       console.log('Index idx_banners_is_active might already exist or table not ready');
+    }
+
+    // Create site_settings table (singleton table for site identity)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS site_settings (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        header_title TEXT,
+        header_subtitle TEXT,
+        header_tagline TEXT,
+        footer_text TEXT,
+        footer_enabled BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT single_row CHECK (id = 1)
+      )
+    `);
+
+    // Insert default values if table is empty
+    const settingsExists = await client.query('SELECT id FROM site_settings WHERE id = 1');
+    if (settingsExists.rows.length === 0) {
+      await client.query(`
+        INSERT INTO site_settings (
+          id, 
+          header_title, 
+          header_subtitle, 
+          header_tagline, 
+          footer_text, 
+          footer_enabled
+        ) VALUES (
+          1,
+          'رادار مانیتورینگ',
+          'سیستم نظارت بر سرورها',
+          'پایش هوشمند، تصمیم مطمئن',
+          '© ۱۴۰۳ سیستم رادار مانیتورینگ. تمامی حقوق محفوظ است.',
+          true
+        )
+      `);
+      console.log('✅ Created default site_settings');
     }
 
     // Insert default admin user if not exists

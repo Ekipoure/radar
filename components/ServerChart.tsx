@@ -108,14 +108,16 @@ function ServerChart({ server, className = '', dateTimeFilter = null }: ServerCh
         const data = await response.json();
         console.log(`Received ${data.length} monitoring records for server ${server.id}:`, data);
         
-        // Convert to chart data and sort by time
+        // Convert to chart data and sort by original time (not formatted string)
         const allData: ChartData[] = data
           .map((item: any) => ({
             time: formatChartTime(item.checked_at),
             status: item.status,
-            responseTime: item.response_time
+            responseTime: item.response_time,
+            originalTime: new Date(item.checked_at).getTime() // Store original timestamp for sorting
           }))
-          .sort((a: ChartData, b: ChartData) => new Date(a.time).getTime() - new Date(b.time).getTime());
+          .sort((a: any, b: any) => a.originalTime - b.originalTime)
+          .map(({ originalTime, ...item }: ChartData & { originalTime: number }) => item); // Remove originalTime after sorting
         
         // Filter to only show disruptions (down, timeout, error status) for candles
         const filteredData = allData.filter(item => 
@@ -269,7 +271,8 @@ function ServerChart({ server, className = '', dateTimeFilter = null }: ServerCh
                 <div 
                   className={`flex items-end gap-1 h-20 ${chartData.length <= 50 ? 'w-full' : ''}`}
                   style={{
-                    minWidth: chartData.length > 50 ? `${chartData.length * 4 + (chartData.length - 1) * 4}px` : undefined
+                    minWidth: chartData.length > 50 ? `${chartData.length * 4 + (chartData.length - 1) * 4}px` : undefined,
+                    direction: 'ltr'
                   }}
                 >
                   {chartData.map((item, index) => {

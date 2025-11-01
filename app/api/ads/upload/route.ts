@@ -1,25 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { verifyToken } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth-middleware';
 
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const data = await request.formData();

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-middleware';
 import monitoringManager from '@/lib/monitoring-manager';
 
 export async function POST(request: NextRequest) {
   try {
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
+    }
     console.log('🚀 Initializing monitoring service...');
     
     // Initialize the monitoring manager
@@ -30,6 +35,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
+    }
     const status = monitoringManager.getStatus();
     return NextResponse.json({ status });
   } catch (error) {

@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
 import { CreateServerData, ServerWithStatus } from '@/lib/types';
-import { verifyToken } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth-middleware';
 import { getMonitoringHistory, getServersWithAdvancedStatus } from '@/lib/monitoring';
 import monitoringService from '@/lib/monitoring-service';
 
-function getAuthToken(request: NextRequest): string | null {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  return request.cookies.get('auth-token')?.value || null;
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const token = getAuthToken(request);
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     // Use the new advanced status logic that requires ALL requests to fail
@@ -34,9 +26,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = getAuthToken(request);
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const serverData: CreateServerData = await request.json();
@@ -54,8 +46,8 @@ export async function POST(request: NextRequest) {
     try {
       const result = await client.query(`
         INSERT INTO servers (name, ip_address, port, request_type, endpoint, expected_status_code, 
-                           check_interval, timeout, server_group, color, is_active)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                           check_interval, timeout, timeout_count, server_group, color, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING *
       `, [
         serverData.name,
@@ -66,6 +58,7 @@ export async function POST(request: NextRequest) {
         serverData.expected_status_code || null,
         serverData.check_interval,
         serverData.timeout,
+        serverData.timeout_count || 3,
         serverData.server_group,
         serverData.color || '#3B82F6',
         true

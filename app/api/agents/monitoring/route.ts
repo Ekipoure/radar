@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-middleware';
 import { 
   getAgentsWithMonitoringData, 
   getMonitoringDataBySource,
@@ -12,6 +13,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
+    }
     const { searchParams } = new URL(request.url);
     const hours = parseFloat(searchParams.get('hours') || '6');
     const sourceIp = searchParams.get('source_ip');

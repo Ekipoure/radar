@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
-import { verifyToken } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth-middleware';
 import { Ad, CreateAdData } from '@/lib/types';
 
 // GET /api/ads - Get all ads
 export async function GET(request: NextRequest) {
   try {
+    // Verify authentication
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
+    }
+
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get('active_only') === 'true';
 
@@ -36,20 +42,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authError = requireAuth(request);
+    if (authError) {
+      return authError;
     }
 
     const body = await request.json();
