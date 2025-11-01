@@ -65,6 +65,7 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
   const [globalDisruptionCount, setGlobalDisruptionCount] = useState<number>(0);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
   const allChartDataRef = useRef<ChartData[]>([]);
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
@@ -78,6 +79,35 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
     window.addEventListener('resize', checkIsMobile);
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
+
+  // Update container width for candle width calculation
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+    
+    const updateContainerWidth = () => {
+      if (chartContainerRef.current) {
+        setContainerWidth(chartContainerRef.current.clientWidth);
+      }
+    };
+    
+    // Initial measurement
+    updateContainerWidth();
+    
+    // Use ResizeObserver for accurate measurements
+    const resizeObserver = new ResizeObserver(() => {
+      updateContainerWidth();
+    });
+    
+    resizeObserver.observe(chartContainerRef.current);
+    
+    // Also listen to window resize as fallback
+    window.addEventListener('resize', updateContainerWidth);
+    
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateContainerWidth);
+    };
+  }, [chartData.length]);
 
   // Update current time every minute
   useEffect(() => {
@@ -517,15 +547,34 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
           </div>
         ) : (
           <div className="space-y-2">
-            {/* Chart Bars Container - Scrollable only in dual mode or mobile */}
+            {/* Chart Bars Container - Scrollable based on candle count */}
             <div className="relative">
               {(() => {
-                // Enable scroll only if:
-                // 1. More than 50 candles AND
-                // 2. (Mobile OR dual mode) - NOT single mode on desktop
-                const shouldEnableScroll = chartData.length > 50 && (isMobile || chartDisplayMode === 'dual');
-                const shouldUseFixedWidth = shouldEnableScroll;
-                const candleWidth = shouldUseFixedWidth ? 4 : undefined;
+                // Candle width should be between 8-10 pixels (using 9px as fixed width when scrolling)
+                const MIN_CANDLE_WIDTH = 8;
+                const MAX_CANDLE_WIDTH = 10;
+                const FIXED_CANDLE_WIDTH = 9; // Fixed width when scroll is enabled
+                const GAP_WIDTH = 1;
+                
+                // Enable scroll based on:
+                // - Single chart mode: if candles > 180
+                // - Dual chart mode (desktop): if candles > 80
+                // - Mobile: if candles > 80 (same as dual mode)
+                const shouldEnableScrollByCount = chartDisplayMode === 'single' 
+                  ? chartData.length > 180
+                  : chartData.length > 80;
+                
+                // Also check if we need scroll based on container width
+                // If candles would need to be < 8px to fit, enable scroll
+                let shouldEnableScrollByWidth = false;
+                if (!shouldEnableScrollByCount && containerWidth > 0 && chartData.length > 0) {
+                  const totalGaps = (chartData.length - 1) * GAP_WIDTH;
+                  const availableWidth = containerWidth - totalGaps;
+                  const calculatedWidth = availableWidth / chartData.length;
+                  shouldEnableScrollByWidth = calculatedWidth < MIN_CANDLE_WIDTH;
+                }
+                
+                const shouldEnableScroll = shouldEnableScrollByCount || shouldEnableScrollByWidth;
                 
                 return (
                   <>
@@ -539,25 +588,50 @@ function AgentChart({ agent, className = '', selectedServers = [], dateTimeFilte
                       <div 
                         className={`flex items-end gap-1 h-20 ${!shouldEnableScroll ? 'w-full' : ''}`}
                         style={{
-                          minWidth: shouldEnableScroll ? `${chartData.length * 4 + (chartData.length - 1) * 4}px` : undefined
+                          minWidth: shouldEnableScroll 
+                            ? `${chartData.length * FIXED_CANDLE_WIDTH + (chartData.length - 1) * GAP_WIDTH}px` 
+                            : undefined
                         }}
                       >
-                        {chartData.map((item, index) => (
-                          <div
-                            key={`${agent.id}-${item.time}-${index}`}
-                            className={`${!shouldUseFixedWidth ? 'flex-1' : ''} rounded-t cursor-pointer hover:opacity-100 transition-all duration-200`}
-                            style={{
-                              height: `${getBarHeight(item.responseTime || 0)}px`,
-                              backgroundColor: item.serverColor,
-                              opacity: 0.8,
-                              minWidth: candleWidth ? `${candleWidth}px` : undefined,
-                              width: candleWidth ? `${candleWidth}px` : undefined
-                            }}
-                            title={`${item.time} - ${item.serverName} - ${statusLabels[item.status]} - ${item.responseTime || 0}ms`}
-                            onMouseEnter={(e) => handleMouseEnter(item, e)}
-                            onMouseLeave={handleMouseLeave}
-                          />
-                        ))}
+                        {chartData.map((item, index) => {
+                          // Calculate candle width
+                          // When scroll is enabled, use fixed width (9px)
+                          // When scroll is disabled, calculate to fit in container but ensure 8-10px range
+                          let candleWidth: number;
+                          
+                          if (shouldEnableScroll) {
+                            candleWidth = FIXED_CANDLE_WIDTH;
+                          } else if (containerWidth > 0 && chartData.length > 0) {
+                            // Calculate width based on available space
+                            const totalGaps = (chartData.length - 1) * GAP_WIDTH;
+                            const availableWidth = containerWidth - totalGaps;
+                            const calculatedWidth = availableWidth / chartData.length;
+                            
+                            // Clamp width to 8-10px range
+                            candleWidth = Math.max(MIN_CANDLE_WIDTH, Math.min(MAX_CANDLE_WIDTH, calculatedWidth));
+                          } else {
+                            // Default to middle of range if container width not available yet
+                            candleWidth = FIXED_CANDLE_WIDTH;
+                          }
+                          
+                          return (
+                            <div
+                              key={`${agent.id}-${item.time}-${index}`}
+                              className="rounded-t cursor-pointer hover:opacity-100 transition-all duration-200"
+                              style={{
+                                height: `${getBarHeight(item.responseTime || 0)}px`,
+                                backgroundColor: item.serverColor,
+                                opacity: 0.8,
+                                minWidth: `${candleWidth}px`,
+                                width: `${candleWidth}px`,
+                                maxWidth: `${candleWidth}px`
+                              }}
+                              title={`${item.time} - ${item.serverName} - ${statusLabels[item.status]} - ${item.responseTime || 0}ms`}
+                              onMouseEnter={(e) => handleMouseEnter(item, e)}
+                              onMouseLeave={handleMouseLeave}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                     
