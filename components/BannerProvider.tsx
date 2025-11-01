@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, createContext, useContext } from 'react';
+import { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
 import { usePathname } from 'next/navigation';
 import { Banner } from '@/lib/types';
 import SimpleBanner from './SimpleBanner';
@@ -29,33 +29,55 @@ export default function BannerProvider({ children }: BannerProviderProps) {
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
 
-  // Only show banners on the main page (not in dashboard)
-  const shouldShowBanners = pathname === '/';
-
   const prevDataJsonRef = useRef<string>('');
 
-  const fetchBanners = async () => {
+  const fetchBanners = useCallback(async () => {
     try {
-      // Prevent caching by adding cache: 'no-store' and a cache-busting param
-      const response = await fetch(`/api/banners/active?ts=${Date.now()}` , { cache: 'no-store' });
+      // Prevent all forms of caching - critical for production builds
+      // Use cache: 'no-store' and timestamp to bypass all caches
+      const response = await fetch(`/api/banners/active?t=${Date.now()}&r=${Math.random()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
       if (response.ok) {
         const data = await response.json();
-        // Deep-compare to avoid unnecessary state updates that can interrupt animation
-        const nextJson = JSON.stringify(data.banners);
-        if (nextJson !== prevDataJsonRef.current) {
-          prevDataJsonRef.current = nextJson;
-          setBanners(data.banners);
+        
+        // Validate response structure
+        if (data && Array.isArray(data.banners)) {
+          // Deep-compare to avoid unnecessary state updates that can interrupt animation
+          const nextJson = JSON.stringify(data.banners);
+          if (nextJson !== prevDataJsonRef.current) {
+            prevDataJsonRef.current = nextJson;
+            setBanners(data.banners);
+          }
+        } else {
+          // Invalid response structure - reset banners
+          console.warn('[BannerProvider] Invalid response format. Expected { banners: [] }, got:', data);
+          setBanners([]);
         }
+      } else {
+        // Handle HTTP errors
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error(`[BannerProvider] API error: ${response.status} ${response.statusText}`, errorText);
+        setBanners([]);
       }
     } catch (error) {
-      console.error('Error fetching banners:', error);
+      console.error('[BannerProvider] Error fetching banners:', error);
+      setBanners([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (shouldShowBanners) {
+    // Only fetch if pathname is definitively '/' (not null/undefined)
+    // This prevents fetching during SSR or when pathname is not yet available
+    if (pathname === '/') {
       fetchBanners();
       // Poll periodically to reflect backend changes without full reload
       const intervalId = setInterval(fetchBanners, 15000);
@@ -71,11 +93,12 @@ export default function BannerProvider({ children }: BannerProviderProps) {
       };
     } else {
       setLoading(false);
+      setBanners([]); // Clear banners when not on main page
     }
-  }, [shouldShowBanners]);
+  }, [pathname, fetchBanners]);
 
   const refreshBanners = () => {
-    if (shouldShowBanners) {
+    if (pathname === '/') {
       fetchBanners();
     }
   };
@@ -85,15 +108,18 @@ export default function BannerProvider({ children }: BannerProviderProps) {
     refreshBanners
   };
 
+  // Only render banners when pathname is definitively '/' and we have banners
+  const showBanners = pathname === '/' && !loading && banners.length > 0;
+
   return (
     <BannerContext.Provider value={value}>
       <div className="min-h-screen flex flex-col">
-        {shouldShowBanners && !loading && banners.length > 0 && (
+        {showBanners && (
           <div className="fixed top-0 left-0 right-0 z-50">
             <SimpleBanner banners={banners} />
           </div>
         )}
-        <div className={`${shouldShowBanners && !loading && banners.length > 0 ? 'pt-16' : ''}`}>
+        <div className={`${showBanners ? 'pt-16' : ''}`}>
           {children}
         </div>
       </div>
