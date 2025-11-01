@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-middleware';
+import { verifyToken } from '@/lib/auth';
 import monitoringManager from '@/lib/monitoring-manager';
+
+function getAuthToken(request: NextRequest): string | null {
+  return request.cookies.get('auth-token')?.value || null;
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
+    const token = getAuthToken(request);
+    if (!token || !verifyToken(token)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Initialize monitoring manager if not already done
@@ -32,9 +36,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
+    const token = getAuthToken(request);
+    if (!token || !verifyToken(token)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { action } = await request.json();

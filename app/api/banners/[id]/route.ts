@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
-import { requireAuth } from '@/lib/auth-middleware';
+import { verifyToken } from '@/lib/auth';
 import { Banner, UpdateBannerData } from '@/lib/types';
 
 // GET /api/banners/[id] - Get a specific banner
@@ -9,12 +9,6 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Verify authentication
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
-    }
-
     const client = await pool.connect();
     
     try {
@@ -50,9 +44,20 @@ export async function PUT(
 ) {
   try {
     // Verify authentication
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json(
+        { error: 'توکن احراز هویت یافت نشد' },
+        { status: 401 }
+      );
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: 'احراز هویت ناموفق' },
+        { status: 401 }
+      );
     }
 
     const body: UpdateBannerData = await request.json();
@@ -152,9 +157,20 @@ export async function DELETE(
 ) {
   try {
     // Verify authentication
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json(
+        { error: 'توکن احراز هویت یافت نشد' },
+        { status: 401 }
+      );
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: 'احراز هویت ناموفق' },
+        { status: 401 }
+      );
     }
 
     const client = await pool.connect();

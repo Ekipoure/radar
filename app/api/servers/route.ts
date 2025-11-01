@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
 import { CreateServerData, ServerWithStatus } from '@/lib/types';
-import { requireAuth } from '@/lib/auth-middleware';
+import { verifyToken } from '@/lib/auth';
 import { getMonitoringHistory, getServersWithAdvancedStatus } from '@/lib/monitoring';
 import monitoringService from '@/lib/monitoring-service';
 
+function getAuthToken(request: NextRequest): string | null {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  return request.cookies.get('auth-token')?.value || null;
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
+    const token = getAuthToken(request);
+    if (!token || !verifyToken(token)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Use the new advanced status logic that requires ALL requests to fail
@@ -26,9 +34,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
+    const token = getAuthToken(request);
+    if (!token || !verifyToken(token)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const serverData: CreateServerData = await request.json();

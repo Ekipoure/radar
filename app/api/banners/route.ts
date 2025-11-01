@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/database';
-import { requireAuth } from '@/lib/auth-middleware';
+import { verifyToken } from '@/lib/auth';
 import { Banner, CreateBannerData } from '@/lib/types';
 
 // GET /api/banners - Get all banners
 export async function GET(request: NextRequest) {
   try {
-    // Verify authentication
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
-    }
-
     const client = await pool.connect();
     
     try {
@@ -39,9 +33,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json(
+        { error: 'توکن احراز هویت یافت نشد' },
+        { status: 401 }
+      );
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: 'احراز هویت ناموفق' },
+        { status: 401 }
+      );
     }
 
     const body: CreateBannerData = await request.json();

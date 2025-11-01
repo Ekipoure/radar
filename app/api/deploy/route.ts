@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DeployAgent, DeployConfig } from '@/lib/deployAgent';
 import pool from '@/lib/database';
-import { requireAuth } from '@/lib/auth-middleware';
+import { verifyToken } from '@/lib/auth';
 import { promises as fs } from 'fs';
 import path from 'path';
+
+function getAuthToken(request: NextRequest): string | null {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  return null;
+}
 
 async function saveUploadedFile(file: File): Promise<string> {
   const bytes = await file.arrayBuffer();
@@ -28,9 +36,9 @@ async function saveUploadedFile(file: File): Promise<string> {
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
+    const token = getAuthToken(request);
+    if (!token || !verifyToken(token)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const contentType = request.headers.get('content-type') || '';

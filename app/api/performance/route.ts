@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import performanceMonitor from '@/lib/performance';
-import { requireAuth } from '@/lib/auth-middleware';
 
 export async function GET(request: NextRequest) {
   try {
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
-    }
     const metrics = performanceMonitor.getAllMetrics();
     
     // Calculate average response times
@@ -38,10 +33,6 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
-    }
     performanceMonitor.clear();
     return NextResponse.json({ message: 'Performance metrics cleared' });
   } catch (error) {

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-middleware';
 import { getMonitoringHistory } from '@/lib/monitoring';
 import pool from '@/lib/database';
 
@@ -8,10 +7,6 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
-    }
     const serverId = parseInt(params.id);
     const { searchParams } = new URL(request.url);
     const hours = parseFloat(searchParams.get('hours') || '6');
