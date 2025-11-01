@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:full": "node scripts/dev-startup.js",
     "build": "next build",
-    "start": "next start",
+    "start": "TZ=Asia/Tehran next start --port 3001",
     "lint": "next lint",
     "monitoring": "tsx scripts/startup.ts",
     "deploy-cli": "tsx -e \"import('./lib/deployAgent').then(m => m.runDeployFromCLI())\"",

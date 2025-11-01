@@ -1,3 +1,6 @@
+// Set timezone before any other imports
+process.env.TZ = 'Asia/Tehran';
+
 import { initializeDatabase } from '../lib/database';
 import monitoringService from '../lib/monitoring-service';
 

@@ -67,6 +67,9 @@ export async function saveMonitoringData(
   const client = await pool.connect();
   
   try {
+    // Ensure timezone is set for this connection
+    await client.query("SET timezone = 'Asia/Tehran'");
+    
     await client.query(
       `INSERT INTO monitoring_data (server_id, source_ip, status, response_time, error_message) 
        VALUES ($1, $2, $3, $4, $5)`,

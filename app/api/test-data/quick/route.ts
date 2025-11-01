@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
     const client = await pool.connect();
     
     try {
+      // Set timezone for this connection
+      await client.query("SET timezone = 'Asia/Tehran'");
+      
       console.log('=== Creating quick test monitoring data ===');
       
       // Get existing agents and servers
